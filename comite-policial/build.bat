@@ -5,6 +5,7 @@ pyinstaller --noconfirm --onefile --windowed --name ComitePolicial run.py
 copy /Y .env.example dist\.env
 if not exist dist\output mkdir dist\output
 if not exist dist\plantillas mkdir dist\plantillas
+copy /Y plantillas\plantilla_comite.pptx dist\plantillas\
 echo.
 echo Listo: dist\ComitePolicial.exe  (editar dist\.env para configurar)
 pause

@@ -41,6 +41,22 @@ copy .env.example .env
 python run.py
 ```
 
+## Exportar a PowerPoint
+
+El botón **📊 Exportar PowerPoint** (barra superior) genera el informe del comité
+con el mismo diseño del original: se abre `plantillas/plantilla_comite.pptx` y solo
+se reescriben textos y celdas con los datos de la aplicación (portada, I Armas,
+II Droga, III Homicidios, IV Migraciones, IV-B Flujo, V Vehículos, VII Bandas,
+VIII Detenidos, una lámina por recuadro de la sección IX y el cierre PDI).
+
+- **Fotos:** el botón **🖼 Fotos** asigna una foto a cada marco de las láminas
+  fijas (se recorta para llenarlo). Las fotos de cada diligencia se agregan en el
+  recuadro (sección IX); se reparten solas en la lámina. Sin foto el marco queda vacío.
+- **Cambiar el diseño:** si el comité cambia el formato, regenerar la plantilla con
+  `python tools/construir_plantilla_pptx.py "<informe nuevo>.pptx"`; el exportador
+  busca las tablas por nombre de objeto, así que conviene mantener los nombres.
+- Prueba sin interfaz: `python tests/pptx_export_test.py`.
+
 ## Configuración (.env)
 
 | Variable | Descripción |
@@ -49,4 +65,4 @@ python run.py
 | `ANO_ANTERIOR` / `ANO_ACTUAL` / `PERIODO` | Comparación interanual |
 | `SEMANA_DEFAULT` / `TURNO_RESPONSABLE` | Valores iniciales de la barra superior |
 | `WINDOW_WIDTH` / `WINDOW_HEIGHT` | Tamaño de ventana |
-| `OUTPUT_DIR` / `PLANTILLA_DOCX` / `ASSETS_DIR` | Rutas (relativas a la raíz o absolutas) |
+| `OUTPUT_DIR` / `PLANTILLA_DOCX` / `PLANTILLA_PPTX` / `ASSETS_DIR` | Rutas (relativas a la raíz o absolutas) |

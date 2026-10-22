@@ -70,6 +70,7 @@ class Settings:
     win_height: int
     output_dir: str
     plantilla_docx: str
+    plantilla_pptx: str
     assets_dir: str
 
 
@@ -86,6 +87,7 @@ settings = Settings(
     win_height=_get_int("WINDOW_HEIGHT", 860),
     output_dir=_path("OUTPUT_DIR", "output"),
     plantilla_docx=_path("PLANTILLA_DOCX", "plantillas/plantilla_base.docx"),
+    plantilla_pptx=_path("PLANTILLA_PPTX", "plantillas/plantilla_comite.pptx"),
     assets_dir=_path("ASSETS_DIR", "assets"),
 )
 

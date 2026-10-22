@@ -1,7 +1,7 @@
 """Vista IX — Concurrencias y Diligencias Relevantes (recuadros de 2 columnas)."""
 import datetime
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from comite_policial.config.theme import *
 from comite_policial.config.catalogos import *
 from comite_policial.core.fechas import fecha_corta
@@ -23,6 +23,7 @@ class RecuadrosMixin:
         self._rec_idx = None            # índice en edición (None = nuevo)
         self._rec_widgets = {}          # etiqueta -> (widget, clase)
         self._rec_defs_imp = []         # campos del último recuadro importado
+        self._rec_fotos: list[str] = []  # fotos del recuadro (solo para el PowerPoint)
         self._rec_after = None
 
         v = self._make_view("recuadros")
@@ -95,6 +96,18 @@ class RecuadrosMixin:
                                  relief="solid", bd=1, wrap="word")
         self.rv_titulo.pack(anchor="w")
 
+        self._rec_lbl(izq, "Fotos para el PowerPoint (opcional)")
+        fotos = tk.Frame(izq, bg=CARD_BG)
+        fotos.pack(anchor="w", fill="x")
+        self._rec_fotos_txt = tk.StringVar()
+        tk.Label(fotos, textvariable=self._rec_fotos_txt, bg=CARD_BG, fg=TEXT_MID,
+                 font=(FONT, 9, "italic"), anchor="w", wraplength=260, justify="left"
+                 ).pack(side="left", padx=(0, 8))
+        action_btn(fotos, "➕ Agregar", self._rec_fotos_agregar, ACCENT,
+                   small=True).pack(side="left", padx=2)
+        action_btn(fotos, "Quitar", self._rec_fotos_quitar, TEXT_MID,
+                   small=True).pack(side="left", padx=2)
+
         # Columna derecha: campos dinámicos según el tipo
         der = tk.LabelFrame(body, text="  Columna derecha (detalle)  ",
                             bg=CARD_BG, fg=ACCENT2, font=(FONT, 9, "bold"),
@@ -131,6 +144,7 @@ class RecuadrosMixin:
             var.trace_add("write", lambda *a: self._rec_preview_later())
         self.rv_titulo.bind("<KeyRelease>", lambda e: self._rec_preview_later())
 
+        self._rec_fotos_refrescar()
         self._rec_construir_campos({}, fecha_corta())
         self._rec_preview()
 
@@ -174,6 +188,23 @@ class RecuadrosMixin:
                 if clase == "lista":
                     tk.Label(fila, text="un ítem\npor línea", bg=CARD_BG,
                              fg=TEXT_LIGHT, font=(FONT, 7)).pack(side="left", padx=4)
+
+    def _rec_fotos_refrescar(self):
+        n = len(self._rec_fotos)
+        self._rec_fotos_txt.set("sin fotos" if not n else
+                                f"{n} foto" + ("" if n == 1 else "s"))
+
+    def _rec_fotos_agregar(self):
+        rutas = filedialog.askopenfilenames(
+            title="Fotos del recuadro",
+            filetypes=[("Imágenes", "*.png *.jpg *.jpeg *.bmp *.gif *.webp"),
+                       ("Todos", "*.*")])
+        self._rec_fotos.extend(r for r in rutas if r not in self._rec_fotos)
+        self._rec_fotos_refrescar()
+
+    def _rec_fotos_quitar(self):
+        self._rec_fotos = []
+        self._rec_fotos_refrescar()
 
     def _rec_defs_actuales(self) -> list:
         if self.rv_tipo.get() == TIPO_IMPORTADO:
@@ -255,6 +286,7 @@ class RecuadrosMixin:
             "detenidos": self.rv_det.get().strip(),
             "titulo": self.rv_titulo.get("1.0", "end-1c").strip(),
             "campos": self._rec_valores_campos(),
+            "fotos": list(self._rec_fotos),
         }
         if rec["tipo"] == TIPO_IMPORTADO:
             rec["defs"] = [list(d) for d in self._rec_defs_imp]
@@ -269,6 +301,8 @@ class RecuadrosMixin:
         self.rv_det.set(rec["detenidos"])
         self.rv_titulo.delete("1.0", "end")
         self.rv_titulo.insert("1.0", rec["titulo"])
+        self._rec_fotos = list(rec.get("fotos", []))
+        self._rec_fotos_refrescar()
         self._rec_construir_campos(rec["campos"])
         self._rec_preview()
 
@@ -293,6 +327,8 @@ class RecuadrosMixin:
         self.rv_tipo.set(TIPO_DEFECTO)
         self.rv_unidad.set(""); self.rv_grupo.set(""); self.rv_det.set("")
         self.rv_titulo.delete("1.0", "end")
+        self._rec_fotos = []
+        self._rec_fotos_refrescar()
         self._rec_construir_campos({}, fecha_corta())
         self._rec_preview()
 
