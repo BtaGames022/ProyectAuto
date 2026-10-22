@@ -13,9 +13,11 @@ from comite_policial.ui.views import ViewsMixin
 from comite_policial.ui.recuadros import RecuadrosMixin
 from comite_policial.ui.views_extra import ExtraViewsMixin
 from comite_policial.ui.documento import DocumentoMixin
+from comite_policial.exporters.pptx_export import PptxExporterMixin
 
 
-class App(ViewsMixin, RecuadrosMixin, ExtraViewsMixin, DocumentoMixin, tk.Tk):
+class App(ViewsMixin, RecuadrosMixin, ExtraViewsMixin, DocumentoMixin,
+          PptxExporterMixin, tk.Tk):
 
     def __init__(self):
         super().__init__()
@@ -36,6 +38,7 @@ class App(ViewsMixin, RecuadrosMixin, ExtraViewsMixin, DocumentoMixin, tk.Tk):
         self.v_status = tk.StringVar(value="Listo — doble clic sobre cualquier celda para editar")
 
         self._det_a_rows: list[dict] = []
+        self.fotos_pptx: dict[str, str] = {}   # clave de marco -> ruta de la foto
         self._doc_init()
         EditableTree.on_any_change = self._doc_cambio
         self.v_semana.trace_add("write", lambda *a: self._doc_cambio())
@@ -117,6 +120,12 @@ class App(ViewsMixin, RecuadrosMixin, ExtraViewsMixin, DocumentoMixin, tk.Tk):
                  relief="flat", font=(FONT, 9),
                  highlightthickness=1, highlightbackground="#334155"
                  ).pack(ipady=4)
+
+        # Exportación a PowerPoint (extremo derecho)
+        exp = tk.Frame(bar, bg=DARK); exp.pack(side="right", padx=(0, 12), pady=14)
+        action_btn(exp, "📊  Exportar PowerPoint", self._exportar_pptx,
+                   SUCCESS).pack(side="left", padx=(0, 6))
+        action_btn(exp, "🖼  Fotos", self._fotos_dialogo, TEAL).pack(side="left")
 
         # Campos con calendario (lado derecho)
         right = tk.Frame(bar, bg=DARK); right.pack(side="right", padx=12, pady=10)

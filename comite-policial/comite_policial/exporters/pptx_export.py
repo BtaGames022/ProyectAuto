@@ -1,147 +1,152 @@
-"""Exportación a Microsoft PowerPoint (.pptx)."""
+"""Exportación a Microsoft PowerPoint (.pptx) con el formato del comité."""
 import os
-import datetime
-from docx import Document
-from docx.shared import Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-from pptx import Presentation
-from pptx.util import Inches, Pt as PptPt
-from pptx.dml.color import RGBColor as PptRGB
-from pptx.enum.text import PP_ALIGN
+import subprocess
+import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox
+
 from comite_policial.config.settings import settings
-from comite_policial.exporters.recuadros_export import agregar_recuadros_pptx
-from comite_policial.config.catalogos import *
-from comite_policial.core.calculos import *
+from comite_policial.config.theme import *
+from comite_policial.exporters.pptx_informe import SLOTS_FOTOS, exportar_informe
+from comite_policial.ui.documento import TREES
+from comite_policial.ui.widgets import action_btn
+
+IMAGENES = [("Imágenes", "*.png *.jpg *.jpeg *.bmp *.gif *.webp"), ("Todos", "*.*")]
 
 
 class PptxExporterMixin:
-    # ── POWERPOINT ────────────────────────────────────────────────────────────
-    def _gen_pptx(self, directorio: str) -> str:
-        prs = Presentation()
+    """Botón «Exportar PowerPoint»: reproduce el informe semanal del comité."""
 
-        def blank(): return prs.slides.add_slide(prs.slide_layouts[6])
+    # ── Datos ────────────────────────────────────────────────────────────────
+    def _tablas_export(self) -> dict:
+        """Filas y total de cada tabla de la aplicación (incluye III-D)."""
+        mapa = dict(TREES, homi_d="t_homi_d")
+        tablas = {}
+        for clave, attr in mapa.items():
+            tree = getattr(self, attr, None)
+            if tree is None:
+                continue
+            rows, total = [], None
+            for r in tree.get_children():
+                tags = tree.item(r, "tags")
+                if "fuente" in tags:
+                    continue
+                vals = tree.raw_values(r)
+                if "total" in tags:
+                    total = vals
+                else:
+                    rows.append(vals)
+            tablas[clave] = {"rows": rows, "total": total}
+        return tablas
 
-        def slide_titulo(slide, texto):
-            tb = slide.shapes.add_textbox(
-                Inches(0.2), Inches(0.06), Inches(9.6), Inches(0.58))
-            tf = tb.text_frame
-            p = tf.paragraphs[0]
-            p.text = texto; p.alignment = PP_ALIGN.LEFT
-            r = p.runs[0]
-            r.font.size = PptPt(16); r.font.bold = True
-            r.font.color.rgb = PptRGB(0xFF, 0xFF, 0xFF)
-            tb.fill.solid()
-            tb.fill.fore_color.rgb = PptRGB(0x1E, 0x3A, 0x5F)
+    def _estado_pptx(self) -> dict:
+        return {"semana": self.v_semana.get().strip(),
+                "tablas": self._tablas_export(),
+                "recuadros": list(getattr(self, "recuadros", []))}
 
-        def tabla_pptx(slide, filas, top, left, ancho, alto):
-            if not filas: return
-            nr, nc = len(filas), len(filas[0])
-            tbl = slide.shapes.add_table(
-                nr, nc, Inches(left), Inches(top), Inches(ancho), Inches(alto)).table
-            for ri, row_data in enumerate(filas):
-                is_total  = str(row_data[0]).startswith("TOTAL")
-                is_fuente = str(row_data[0]).startswith("FUENTE")
-                for ci, val in enumerate(row_data):
-                    cell = tbl.cell(ri, ci)
-                    cell.text = str(val)
-                    tf2 = cell.text_frame.paragraphs[0]
-                    tf2.alignment = PP_ALIGN.CENTER
-                    run = tf2.runs[0] if tf2.runs else tf2.add_run()
-                    run.font.size = PptPt(9)
-                    if ri == 0:
-                        run.font.bold = True
-                        run.font.color.rgb = PptRGB(0xFF, 0xFF, 0xFF)
-                        cell.fill.solid()
-                        cell.fill.fore_color.rgb = PptRGB(0x1E, 0x3A, 0x5F)
-                    elif is_total:
-                        run.font.bold = True
-                        cell.fill.solid()
-                        cell.fill.fore_color.rgb = PptRGB(0xDB, 0xEA, 0xFE)
-                    elif is_fuente:
-                        run.font.italic = True
-                        run.font.size = PptPt(7)
-                        run.font.color.rgb = PptRGB(0x64, 0x74, 0x8B)
-                        cell.fill.solid()
-                        cell.fill.fore_color.rgb = PptRGB(0xF8, 0xFA, 0xFC)
-
-        def make_slide(titulo, filas, top=0.8, left=0.2,
-                       ancho=9.6, alto=None):
-            sl = blank()
-            slide_titulo(sl, titulo)
-            h = alto if alto else min(0.38 * len(filas) + 0.1, 6.5)
-            tabla_pptx(sl, filas, top, left, ancho, h)
-            return sl
-
-        # Portada
-        sl = blank()
-        tb = sl.shapes.add_textbox(Inches(0.8), Inches(1.4), Inches(8.4), Inches(3))
-        tf = tb.text_frame
-        p = tf.paragraphs[0]
-        p.text = "COMITÉ POLICIAL SEMANAL"
-        p.alignment = PP_ALIGN.CENTER
-        p.runs[0].font.size = PptPt(36)
-        p.runs[0].font.bold = True
-        p.runs[0].font.color.rgb = PptRGB(0x1E, 0x3A, 0x5F)
-        for line in [f"Región Policial Valparaíso",
-                     f"Semana del {self.v_semana.get()}",
-                     f"Turno: {self.v_turno.get()}"]:
-            np_ = tf.add_paragraph()
-            np_.text = line
-            np_.alignment = PP_ALIGN.CENTER
-            if np_.runs:
-                np_.runs[0].font.size = PptPt(16)
-                np_.runs[0].font.color.rgb = PptRGB(0x47, 0x55, 0x69)
-
-        make_slide(f"I. ARMAS DE LA SEMANA — {self.v_semana.get()}",
-                   self._get_tree_data(self.t_armas))
-        make_slide(f"II. DROGA INCAUTADA — {self.v_semana.get()} (Gramos)",
-                   self._get_tree_data(self.t_drogas_g))
-        make_slide("II. DROGA — Plantas",
-                   self._get_tree_data(self.t_drogas_p))
-        make_slide(f"III‑A. HOMICIDIOS SEMANA — {self.v_semana.get()}",
-                   self._get_tree_data(self.t_homi_a))
-        make_slide("III‑B. MODALIDAD EN HOMICIDIOS",
-                   self._get_tree_data(self.t_homi_b), ancho=9.6)
-        make_slide("III‑C. RESULTADO INVESTIGATIVO (% base 100)",
-                   self._get_tree_data(self.t_homi_c))
-        make_slide(f"III‑D. COMPARATIVO {PERIODO} {ANO_ANT}/{ANO_ACT}",
-                   self._get_tree_data(self.t_homi_d))
-        make_slide("IV. MIGRACIONES Y POLICÍA INTERNACIONAL",
-                   self._get_tree_data(self.t_migr), ancho=9.6)
-        make_slide("IV‑B. FLUJO MIGRATORIO — LOS LIBERTADORES",
-                   self._get_tree_data(self.t_flujo), ancho=9.6)
-        make_slide("V. VEHÍCULOS — ESTADO",
-                   self._get_tree_data(self.t_veh_e))
-        make_slide("V. VEHÍCULOS — TIPO",
-                   self._get_tree_data(self.t_veh_t))
-        make_slide("VI. DELITOS SEXUALES (BRISEX)",
-                   self._get_tree_data(self.t_brisex))
-        make_slide(f"VII. BANDAS DESARTICULADAS — {self.v_semana.get()}",
-                   self._get_tree_data(self.t_bandas))
-        make_slide(f"VIII‑A. DETENIDOS POR DELITO — {self.v_semana.get()}",
-                   self._get_tree_data(self.t_det_a))
-        make_slide(f"VIII‑B. DETENIDOS POR PREFECTURA — {self.v_semana.get()}",
-                   self._get_tree_data(self.t_det_b))
-        make_slide(f"VIII‑C. DETENIDOS {ANO_ACT} A LA FECHA",
-                   self._get_tree_data(self.t_det_c))
-
-        agregar_recuadros_pptx(prs, getattr(self, "recuadros", []),
-                               slide_titulo, blank)
-
-        texto_x = self.txt_x.get("1.0", "end-1c").strip()
-        if texto_x:
-            sx = blank()
-            slide_titulo(sx, "X. DILIGENCIAS DE RELEVANCIA DE LA SEMANA")
-            tbx = sx.shapes.add_textbox(Inches(0.4), Inches(1.0), Inches(9.2), Inches(5))
-            tbx.text_frame.word_wrap = True
-            for i, linea in enumerate(texto_x.split("\n")):
-                par = tbx.text_frame.paragraphs[0] if i == 0 else tbx.text_frame.add_paragraph()
-                par.text = linea
-                par.runs[0].font.size = PptPt(16)
-
-        nombre = f"PRESENTACION_MANDO_{self.v_fecha.get().replace('/','‑')}.pptx"
+    def _gen_pptx(self, directorio: str, nombre: str = "") -> tuple:
+        """Genera el .pptx en `directorio`; devuelve (ruta, avisos)."""
+        estado = self._estado_pptx()
+        nombre = nombre or f"COMITE POLICIAL {estado['semana']}.pptx"
         ruta = os.path.join(directorio, nombre)
-        prs.save(ruta)
-        return ruta
+        avisos = exportar_informe(
+            estado, ruta, settings.plantilla_pptx,
+            fotos=getattr(self, "fotos_pptx", {}),
+            ano_ant=settings.ano_ant, ano_act=settings.ano_act,
+            periodo=settings.periodo)
+        return ruta, avisos
+
+    # ── Botón ────────────────────────────────────────────────────────────────
+    def _exportar_pptx(self):
+        if not os.path.isfile(settings.plantilla_pptx):
+            messagebox.showerror(
+                "Falta la plantilla",
+                f"No se encontró la plantilla del informe:\n{settings.plantilla_pptx}")
+            return
+        os.makedirs(settings.output_dir, exist_ok=True)
+        inicial = f"COMITE POLICIAL {self.v_semana.get().strip()}.pptx"
+        ruta = filedialog.asksaveasfilename(
+            title="Exportar informe a PowerPoint", defaultextension=".pptx",
+            initialdir=settings.output_dir, initialfile=inicial,
+            filetypes=[("Presentación de PowerPoint", "*.pptx")])
+        if not ruta:
+            return
+        self.v_status.set("⏳  Generando el PowerPoint…")
+        self.update_idletasks()
+        try:
+            ruta, avisos = self._gen_pptx(os.path.dirname(ruta), os.path.basename(ruta))
+        except PermissionError:
+            self.v_status.set("⚠️  No se pudo escribir: el archivo está abierto en PowerPoint")
+            messagebox.showwarning(
+                "Archivo en uso",
+                "No se pudo guardar: ese PowerPoint está abierto. Ciérralo y reintenta.")
+            return
+        except Exception as exc:
+            self.v_status.set(f"❌  Error al exportar: {exc}")
+            messagebox.showerror("Error al exportar", f"{type(exc).__name__}: {exc}")
+            return
+        self.v_status.set(f"✅  PowerPoint exportado: {os.path.basename(ruta)}")
+        msg = f"Informe exportado en:\n{ruta}"
+        if avisos:
+            msg += "\n\nRevisar:\n• " + "\n• ".join(avisos)
+        if messagebox.askyesno("Exportación lista", msg + "\n\n¿Abrirlo ahora?"):
+            self._abrir_archivo(ruta)
+
+    @staticmethod
+    def _abrir_archivo(ruta: str):
+        try:
+            if hasattr(os, "startfile"):
+                os.startfile(ruta)                       # Windows
+            else:
+                subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", ruta])
+        except OSError:
+            pass
+
+    # ── Fotos de las láminas ─────────────────────────────────────────────────
+    def _fotos_dialogo(self):
+        if not hasattr(self, "fotos_pptx"):
+            self.fotos_pptx = {}
+        win = tk.Toplevel(self)
+        win.title("Fotos del PowerPoint")
+        win.configure(bg=LIGHT_BG)
+        win.transient(self)
+        tk.Label(win, text="Fotos de las láminas del PowerPoint", bg=LIGHT_BG,
+                 fg=TEXT_DARK, font=(FONT, 11, "bold")).pack(anchor="w", padx=16, pady=(14, 2))
+        tk.Label(win, text="Cada foto se recorta para llenar su marco, como en el informe.\n"
+                 "Los marcos sin foto quedan vacíos. Las fotos de las diligencias "
+                 "se agregan en cada recuadro (sección IX).",
+                 bg=LIGHT_BG, fg=TEXT_MID, font=(FONT, 9), justify="left"
+                 ).pack(anchor="w", padx=16, pady=(0, 8))
+
+        marco = tk.Frame(win, bg=CARD_BG, padx=10, pady=8)
+        marco.pack(fill="both", expand=True, padx=16, pady=(0, 14))
+        nombres = {}
+
+        def refrescar(clave):
+            ruta = self.fotos_pptx.get(clave)
+            nombres[clave].set(os.path.basename(ruta) if ruta else "— sin foto —")
+
+        def elegir(clave):
+            ruta = filedialog.askopenfilename(parent=win, title="Elegir foto",
+                                              filetypes=IMAGENES)
+            if ruta:
+                self.fotos_pptx[clave] = ruta
+                refrescar(clave)
+
+        def quitar(clave):
+            self.fotos_pptx.pop(clave, None)
+            refrescar(clave)
+
+        for i, (clave, etiqueta, _lam, _geo) in enumerate(SLOTS_FOTOS):
+            tk.Label(marco, text=etiqueta, bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 9),
+                     anchor="w", width=38).grid(row=i, column=0, sticky="w", pady=2)
+            nombres[clave] = tk.StringVar()
+            tk.Label(marco, textvariable=nombres[clave], bg=CARD_BG, fg=TEXT_MID,
+                     font=(FONT, 9, "italic"), anchor="w", width=28
+                     ).grid(row=i, column=1, sticky="w", padx=8)
+            action_btn(marco, "Elegir…", lambda c=clave: elegir(c), ACCENT,
+                       small=True).grid(row=i, column=2, padx=2)
+            action_btn(marco, "Quitar", lambda c=clave: quitar(c), TEXT_MID,
+                       small=True).grid(row=i, column=3, padx=2)
+            refrescar(clave)
+        action_btn(win, "Cerrar", win.destroy, SUCCESS).pack(pady=(0, 14))
