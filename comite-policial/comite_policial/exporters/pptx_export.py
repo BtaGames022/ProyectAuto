@@ -42,7 +42,9 @@ class PptxExporterMixin:
     def _estado_pptx(self) -> dict:
         return {"semana": self.v_semana.get().strip(),
                 "tablas": self._tablas_export(),
-                "recuadros": list(getattr(self, "recuadros", []))}
+                # solo los recuadros marcados con la casilla PPT (por defecto, todos)
+                "recuadros": [r for r in getattr(self, "recuadros", [])
+                              if r.get("en_pptx", True)]}
 
     def _gen_pptx(self, directorio: str, nombre: str = "") -> tuple:
         """Genera el .pptx en `directorio`; devuelve (ruta, avisos)."""

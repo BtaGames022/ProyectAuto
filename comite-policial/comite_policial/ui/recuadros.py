@@ -12,6 +12,9 @@ from comite_policial.ui.widgets import *
 from comite_policial.ui.calendarios import CalendarPopup
 
 
+CASILLA_SI, CASILLA_NO = "☑", "☐"
+
+
 class RecuadrosMixin:
     """Lista, editor y vista previa de los recuadros de la sección IX."""
 
@@ -32,11 +35,16 @@ class RecuadrosMixin:
 
         # ── Lista ────────────────────────────────────────────────────────────
         _, c = card(v, "Recuadros registrados (en el orden en que saldrán en el informe)")
-        hint_label(c, "Selecciona uno y pulsa «Editar» (o doble clic) para modificarlo")
-        cols = ["N°", "UNIDAD", "TIPO", "FECHA", "LUGAR", "DETENIDOS"]
-        widths = [45, 330, 260, 100, 200, 110]
+        hint_label(c, "Selecciona uno y pulsa «Editar» (o doble clic) para modificarlo. "
+                      "La casilla PPT elige qué recuadros se exportan al PowerPoint")
+        cols = ["PPT", "N°", "UNIDAD", "TIPO", "FECHA", "LUGAR", "DETENIDOS"]
+        widths = [50, 45, 330, 260, 100, 200, 110]
         self.t_rec = tree_with_scroll(c, cols, widths, height=5, editable=[99])
-        self.t_rec.bind("<Double-1>", lambda e: self._rec_editar(), add="+")
+        self.t_rec.bind("<Button-1>", self._rec_click_casilla, add="+")
+        self.t_rec.bind("<Double-1>", self._rec_doble_clic, add="+")
+        self.v_rec_pptx = tk.StringVar()
+        tk.Label(c, textvariable=self.v_rec_pptx, bg=CARD_BG, fg=TEXT_MID,
+                 font=(FONT, 9, "bold")).pack(anchor="w", padx=14)
 
         bar = tk.Frame(c, bg=CARD_BG)
         bar.pack(pady=8)
@@ -47,6 +55,8 @@ class RecuadrosMixin:
             ("▲ Subir", lambda: self._rec_mover(-1), TEXT_MID),
             ("▼ Bajar", lambda: self._rec_mover(1), TEXT_MID),
             ("🗑 Eliminar", self._rec_eliminar, DANGER),
+            ("☑ Todas al PPT", lambda: self._rec_marcar_todas(True), SUCCESS),
+            ("☐ Ninguna al PPT", lambda: self._rec_marcar_todas(False), TEXT_MID),
         ]:
             action_btn(bar, txt, cmd, col, small=True).pack(side="left", padx=4)
 
@@ -147,6 +157,7 @@ class RecuadrosMixin:
         self._rec_fotos_refrescar()
         self._rec_construir_campos({}, fecha_corta())
         self._rec_preview()
+        self._rec_actualizar_contador()
 
     # =========================================================================
     # CAMPOS DINÁMICOS
@@ -309,11 +320,45 @@ class RecuadrosMixin:
     def _rec_refrescar_lista(self, seleccionar=None):
         self.t_rec.clear()
         for i, rec in enumerate(self.recuadros, 1):
-            self.t_rec.add_row([i, *resumen(rec)])
+            self.t_rec.add_row([CASILLA_SI if rec.get("en_pptx", True) else CASILLA_NO,
+                                i, *resumen(rec)])
         if seleccionar is not None and 0 <= seleccionar < len(self.recuadros):
             iid = self.t_rec.get_children()[seleccionar]
             self.t_rec.selection_set(iid)
             self.t_rec.see(iid)
+        self._rec_actualizar_contador()
+
+    # ── Selección de recuadros para el PowerPoint ────────────────────────────
+    def _rec_actualizar_contador(self):
+        n = sum(1 for r in self.recuadros if r.get("en_pptx", True))
+        self.v_rec_pptx.set(f"Se exportarán {n} de {len(self.recuadros)} recuadros al PowerPoint")
+
+    def _rec_click_casilla(self, event):
+        """Un clic en la columna PPT marca/desmarca el recuadro."""
+        if (self.t_rec.identify_region(event.x, event.y) != "cell"
+                or self.t_rec.identify_column(event.x) != "#1"):
+            return None
+        iid = self.t_rec.identify_row(event.y)
+        if not iid:
+            return None
+        i = list(self.t_rec.get_children()).index(iid)
+        rec = self.recuadros[i]
+        rec["en_pptx"] = not rec.get("en_pptx", True)
+        vals = self.t_rec.raw_values(iid)
+        vals[0] = CASILLA_SI if rec["en_pptx"] else CASILLA_NO
+        self.t_rec.item(iid, values=vals)
+        self._rec_actualizar_contador()
+        return "break"
+
+    def _rec_doble_clic(self, event):
+        if self.t_rec.identify_column(event.x) == "#1":
+            return "break"
+        self._rec_editar()
+
+    def _rec_marcar_todas(self, valor: bool):
+        for rec in self.recuadros:
+            rec["en_pptx"] = valor
+        self._rec_refrescar_lista(self._rec_seleccion())
 
     def _rec_seleccion(self):
         sel = self.t_rec.selection()
@@ -343,7 +388,7 @@ class RecuadrosMixin:
             idx = len(self.recuadros) - 1
         else:
             previo = self.recuadros[self._rec_idx]
-            for k in CLAVES_META:               # conserva el vínculo con el documento
+            for k in CLAVES_META + ("en_pptx",):    # conserva vínculo con el documento
                 if k in previo:
                     rec[k] = previo[k]
             self.recuadros[self._rec_idx] = rec

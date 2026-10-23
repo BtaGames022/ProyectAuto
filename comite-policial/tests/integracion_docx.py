@@ -1,6 +1,18 @@
 """Prueba de integración: importar en la app, editar y comprobar la sincronización."""
-import shutil, sys, zipfile
-sys.path.insert(0, ".")
+import shutil, zipfile
+import os, sys
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+os.chdir(ROOT)
+sys.path.insert(0, ROOT)
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+EJEMPLO = "tests/data/informe_ejemplo.docx"
+if not os.path.isfile(EJEMPLO):
+    print(f"SKIP: falta {EJEMPLO} (informe real, no se versiona)")
+    sys.exit(0)
 from tkinter import filedialog, messagebox
 from comite_policial.ui.app import App
 from comite_policial.docio.importador import importar

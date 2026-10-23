@@ -1,6 +1,18 @@
 """Prueba de ida y vuelta: importar -> modificar -> escribir -> reimportar."""
-import copy, os, sys, zipfile
-sys.path.insert(0, ".")
+import copy, zipfile
+import os, sys
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+os.chdir(ROOT)
+sys.path.insert(0, ROOT)
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+EJEMPLO = "tests/data/informe_ejemplo.docx"
+if not os.path.isfile(EJEMPLO):
+    print(f"SKIP: falta {EJEMPLO} (informe real, no se versiona)")
+    sys.exit(0)
 from comite_policial.docio.importador import importar
 from comite_policial.docio.escritor import escribir
 

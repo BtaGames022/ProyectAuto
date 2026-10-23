@@ -1,3 +1,14 @@
+import os, sys
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+os.chdir(ROOT)
+sys.path.insert(0, ROOT)
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+import tempfile
+
 from comite_policial.ui.app import App
 from comite_policial.core.recuadros import *
 
@@ -25,6 +36,18 @@ print("n recuadros", len(a.recuadros))
 rec = a.recuadros[0]
 print(grupos_izquierda(rec))
 for p in parrafos_derecha(rec): print(p)
-print(a._gen_word("output")[-30:].encode("ascii", "replace"))
-print(a._gen_pptx("output")[-30:].encode("ascii", "replace"))
+# Selección de recuadros para el PowerPoint (casilla PPT)
+assert len(a._estado_pptx()["recuadros"]) == len(a.recuadros)
+a.recuadros[0]["en_pptx"] = False
+assert len(a._estado_pptx()["recuadros"]) == len(a.recuadros) - 1
+a._rec_refrescar_lista(0); a.update()
+assert a.t_rec.raw_values(a.t_rec.get_children()[0])[0] == "\u2610"
+print(a.v_rec_pptx.get())
+a._rec_marcar_todas(False)
+assert a._estado_pptx()["recuadros"] == []
+a._rec_marcar_todas(True)
+with tempfile.TemporaryDirectory() as tmp:
+    ruta, avisos = a._gen_pptx(tmp)
+    assert os.path.isfile(ruta), ruta
+    print("pptx OK:", len(a.recuadros), "recuadros, avisos:", avisos)
 a.destroy()
