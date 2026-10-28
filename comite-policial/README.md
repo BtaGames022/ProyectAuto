@@ -101,25 +101,78 @@ Genera `dist\ComitePolicial.exe` (`--onefile --windowed`, definido en
 `ComitePolicial.spec`) y copia `.env` y `plantillas\plantilla_comite.pptx` junto
 al ejecutable. Edita `dist\.env` para configurar.
 
-## Pruebas
+## Pruebas automatizadas
+
+Sirven para comprobar, en un minuto y sin abrir la aplicación a mano, que nada se rompió
+después de un cambio: importar y guardar el Word, exportar el PowerPoint, el scroll y todos
+los botones de la interfaz.
+
+### Cómo ejecutarlas
+
+1. Instalar las dependencias (una sola vez): `pip install -r requirements-dev.txt`.
+2. Cerrar la aplicación si está abierta y, desde la carpeta `comite-policial`, correr:
 
 ```
 python tests/run_all.py
 ```
 
-Corre seis pruebas (no dependen del directorio actual ni de un informe real):
+Se abren y cierran ventanas de la aplicación durante la prueba: es normal, no hay que
+tocarlas. Necesita una pantalla (no corre por SSH ni en un servidor sin escritorio) y
+Python 3.10 o superior. Tarda cerca de un minuto.
 
-- `roundtrip_docx` e `integracion_docx`: importar un Word, editarlo y reescribirlo sin
-  perder formato, y el flujo App y .docx con el guardado automático.
-- `smoke_recuadros`: sección IX y exportación a PowerPoint.
-- `pptx_export_test`: exportador sin interfaz.
-- `scroll_test`: la rueda del mouse no cambia desplegables ni reconstruye el formulario.
-- `ui_completa_test`: recorre todas las vistas y botones, importa un Word válido, uno
-  dañado y uno ajeno, exporta con y sin fotos y comprueba el cierre ordenado.
+Resultado esperado, una línea por prueba:
 
-Si falta `tests/data/informe_ejemplo.docx` (el informe real no se versiona; `*.docx` está
-en `.gitignore`) se genera uno sintético con `tests/make_informe_docx.py`, que tiene la
-misma estructura que el real.
+```
+OK     roundtrip_docx.py
+OK     integracion_docx.py
+OK     smoke_recuadros.py
+OK     pptx_export_test.py
+OK     scroll_test.py
+OK     ui_completa_test.py
+```
+
+Si alguna dice `FALLA`, debajo aparece el detalle (la línea que no se cumplió). Un
+código de salida distinto de 0 indica fallo, así que sirve también en un flujo automático.
+
+Para ejecutar una sola prueba, por ejemplo la del scroll:
+
+```
+python tests/scroll_test.py
+```
+
+Cada una imprime `OK` al final si todo salió bien.
+
+### Qué comprueba cada una
+
+| Prueba | Qué verifica |
+|---|---|
+| `roundtrip_docx` | Importar un Word, modificarlo y reescribirlo sin perder el formato; sin cambios el XML queda idéntico. |
+| `integracion_docx` | Flujo completo App y Word: importar, editar una celda o un recuadro y comprobar que el guardado automático llega al archivo. |
+| `smoke_recuadros` | Sección IX (crear, duplicar, casilla PPT) y exportación a Word y PowerPoint. |
+| `pptx_export_test` | El exportador de PowerPoint sin interfaz: sin restos de la semana de la plantilla, cantidad de láminas, textos y cierre. |
+| `scroll_test` | Regresión del error «se repite la vista»: la rueda del mouse no cambia desplegables ni reconstruye el formulario, y la vista previa no crece sin límite. |
+| `ui_completa_test` | Abre todas las vistas; edita celdas con el teclado; agrega y elimina filas; calendarios; recuadros; fotos; exporta el PowerPoint (con una foto perdida y el archivo bloqueado); importa un Word válido, uno dañado y uno ajeno; comprueba que al cerrar se guarda lo pendiente. |
+
+### Informe de ejemplo
+
+Las pruebas de Word necesitan un informe. El real no se versiona (`*.docx` está en
+`.gitignore`), por eso, si falta `tests/data/informe_ejemplo.docx`, se genera uno
+sintético con la misma estructura (`tests/make_informe_docx.py`). Para crearlo a mano:
+
+```
+python tests/make_informe_docx.py
+```
+
+Si se quiere probar con el informe real, basta copiarlo con ese nombre a `tests/data/`.
+Las pruebas trabajan siempre sobre copias: el original no se modifica.
+
+### Agregar una prueba nueva
+
+Crear `tests/mi_prueba.py` que termine con `print("OK")` si todo pasó (o falle con un
+`assert`) y agregar su nombre a la lista `PRUEBAS` de `tests/run_all.py`. Para ejercitar
+la interfaz, copiar el arranque de `tests/ui_completa_test.py`: reemplaza
+`report_callback_exception` para que un error dentro de un botón haga fallar la prueba en
+lugar de pasar en silencio.
 
 ## Configuración (.env)
 
