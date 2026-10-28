@@ -59,6 +59,21 @@ comite-policial/
 └── assets/
 ```
 
+## Interfaz
+
+Diseño institucional PDI: azul marino `#002060`, celeste de las tablas del informe,
+amarillo `#FFC000` solo como acento (sección activa y botón de exportar) y Arial,
+la tipografía de los documentos del comité.
+
+- **Menú lateral:** numeral romano de cada sección; un punto verde indica que ya tiene datos.
+- **Barra de contexto:** semana operativa, fecha del informe y turno, siempre visibles.
+- **Atajos:** `Ctrl+E` exporta a PowerPoint y `Ctrl+S` guarda en el Word importado.
+- **Rueda del mouse:** `ui/scroll.py` decide quién se desplaza (tabla, texto o panel); un
+  desplegable nunca cambia de valor al pasar la rueda (era la causa de que el editor de
+  recuadros «se repitiera» al hacer scroll). Prueba: `tests/scroll_test.py`.
+- **Colores y tamaños:** todo sale de `config/theme.py`; los widgets en `ui/widgets.py`
+  (`Boton`, `card`, `section_title`, `EditableTree`) y los valores globales en `ui/estilo.py`.
+
 ## Exportar a PowerPoint
 
 El botón **Exportar PowerPoint** abre `plantillas/plantilla_comite.pptx` (el
@@ -92,13 +107,19 @@ al ejecutable. Edita `dist\.env` para configurar.
 python tests/run_all.py
 ```
 
-Corre las cuatro pruebas (no dependen del directorio actual):
-`roundtrip_docx` (lectura/escritura sin pérdida de formato), `integracion_docx`
-(flujo App ↔ .docx), `smoke_recuadros` (Sección IX + exportación PPTX) y
-`pptx_export_test` (exportador sin interfaz).
+Corre seis pruebas (no dependen del directorio actual ni de un informe real):
 
-Las tres primeras usan `tests/data/informe_ejemplo.docx`, un informe real que
-**no se versiona** (`*.docx` está en `.gitignore`); si falta, se omiten con `SKIP`.
+- `roundtrip_docx` e `integracion_docx`: importar un Word, editarlo y reescribirlo sin
+  perder formato, y el flujo App y .docx con el guardado automático.
+- `smoke_recuadros`: sección IX y exportación a PowerPoint.
+- `pptx_export_test`: exportador sin interfaz.
+- `scroll_test`: la rueda del mouse no cambia desplegables ni reconstruye el formulario.
+- `ui_completa_test`: recorre todas las vistas y botones, importa un Word válido, uno
+  dañado y uno ajeno, exporta con y sin fotos y comprueba el cierre ordenado.
+
+Si falta `tests/data/informe_ejemplo.docx` (el informe real no se versiona; `*.docx` está
+en `.gitignore`) se genera uno sintético con `tests/make_informe_docx.py`, que tiene la
+misma estructura que el real.
 
 ## Configuración (.env)
 

@@ -10,9 +10,10 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:
         pass
 EJEMPLO = "tests/data/informe_ejemplo.docx"
-if not os.path.isfile(EJEMPLO):
-    print(f"SKIP: falta {EJEMPLO} (informe real, no se versiona)")
-    sys.exit(0)
+if not os.path.isfile(EJEMPLO):          # informe real no versionado: se usa el sintético
+    sys.path.insert(0, os.path.join(ROOT, "tests"))
+    import make_informe_docx
+    make_informe_docx.crear(EJEMPLO)
 from tkinter import filedialog, messagebox
 from comite_policial.ui.app import App
 from comite_policial.docio.importador import importar

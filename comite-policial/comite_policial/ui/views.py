@@ -16,7 +16,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_armas(self):
         v = self._make_view("armas")
-        section_title(v, "I", "ARMAS DE LA SEMANA")
+        section_title(v, "I", "Armas de la semana")
 
         _, c = card(v, "Incautación de Armas — Semana vs. 2026 a la fecha")
         hint_label(c, "Doble clic sobre una celda numérica para editarla")
@@ -55,7 +55,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_drogas(self):
         v = self._make_view("drogas")
-        section_title(v, "II", "DROGA INCAUTADA EN LA SEMANA")
+        section_title(v, "II", "Droga incautada en la semana")
 
         _, c1 = card(v, "Sustancias en Gramos")
         hint_label(c1, "Doble clic para editar · Admite decimales (ej: 1651,21)")
@@ -112,7 +112,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_homi_a(self):
         v = self._make_view("homi_a")
-        section_title(v, "III‑A", "HOMICIDIOS POR BRIGADA DE HOMICIDIOS")
+        section_title(v, "III-A", "Homicidios por brigada")
 
         _, c = card(v, "Homicidios — Semana vs. Año a la Fecha")
         hint_label(c, "Doble clic para editar — Los totales se recalculan automáticamente")
@@ -143,8 +143,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_homi_b(self):
         v = self._make_view("homi_b")
-        section_title(v, "III‑B", "MODALIDAD EN HOMICIDIOS",
-                      f"Semana {self.v_semana.get()}")
+        section_title(v, "III-B", "Modalidad en homicidios")
 
         _, c = card(v, "Modalidad — Desglose por Brigada y Año")
         hint_label(c, "Doble clic para editar · Columnas: BH VPO · BH LAD · BH SAN · Año a la fecha")
@@ -178,10 +177,10 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_homi_c(self):
         v = self._make_view("homi_c")
-        section_title(v, "III‑C", "RESULTADO EN HOMICIDIOS",
-                      "Porcentaje base 100%")
+        section_title(v, "III-C", "Resultado en homicidios",
+                      "porcentaje sobre base 100")
 
-        _, c = card(v, "Resultado Investigativo — % automático")
+        _, c = card(v, "Resultado investigativo (el porcentaje se calcula solo)")
         hint_label(c, "Edita la columna CASOS · El porcentaje se calcula solo")
         cols   = ["HOMICIDIOS", "CASOS (01.ENE - HOY)", "% AÑO 2026"]
         widths = [280, 200, 160]
@@ -214,8 +213,8 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_homi_d(self):
         v = self._make_view("homi_d")
-        section_title(v, "III‑D",
-                      f"COMPARATIVO HOMICIDIOS {PERIODO} {ANO_ANT}/{ANO_ACT}")
+        section_title(v, "III-D",
+                      f"Comparativo de homicidios {PERIODO} {ANO_ANT}/{ANO_ACT}")
 
         _, c = card(v, f"Comparativo {PERIODO} {ANO_ANT} vs {ANO_ACT} — Variación % automática")
         hint_label(c, f"Edita las columnas {ANO_ANT} y {ANO_ACT} · La variación se calcula sola")
@@ -251,13 +250,13 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_migr(self):
         v = self._make_view("migr")
-        section_title(v, "IV", "DEPARTAMENTO DE MIGRACIONES Y POLICÍA INTERNACIONAL")
+        section_title(v, "IV", "Migraciones y Policía Internacional")
 
         _, c = card(v, "Fiscalizaciones por Unidad")
         hint_label(c, "Doble clic para editar · La última columna admite texto libre (nacionalidades)")
         cols   = ["UNIDAD", "FISC.", "FISCALIZADOS", "DENUNCIADOS",
                   "NOTIF. EXPULSIÓN", "DETENIDOS", "NACION. DENUNCIADOS"]
-        widths = [130, 65, 95, 95, 130, 90, 280]
+        widths = [120, 80, 120, 120, 150, 100, 300]
         self.t_migr = tree_with_scroll(c, cols, widths, height=9,
                                        editable=[1, 2, 3, 4, 5, 6],
                                        on_change=self._recalc_migr)
@@ -282,8 +281,8 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_vehic(self):
         v = self._make_view("vehic")
-        section_title(v, "V", "VEHÍCULOS INCAUTADOS Y RECUPERADOS",
-                      "REGIÓN POLICIAL VALPARAÍSO")
+        section_title(v, "V", "Vehículos incautados y recuperados",
+                      "Región Policial Valparaíso")
 
         _, c1 = card(v, "Por Estado")
         hint_label(c1, "Doble clic para editar")
@@ -319,7 +318,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_brisex(self):
         v = self._make_view("brisex")
-        section_title(v, "VI", "CONCURRENCIAS — DELITOS SEXUALES (BRISEX)")
+        section_title(v, "VI", "Delitos sexuales (Brisex)")
 
         _, c = card(v, "Brigadas de Delitos Sexuales")
         hint_label(c, "Doble clic para editar")
@@ -339,8 +338,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_bandas(self):
         v = self._make_view("bandas")
-        section_title(v, "VII", "BANDAS DESARTICULADAS",
-                      f"Semana {self.v_semana.get()}")
+        section_title(v, "VII", "Bandas desarticuladas")
 
         _, c = card(v, "Registro de Bandas por Prefectura")
         hint_label(c, "Doble clic para editar · La columna DELITO admite texto libre")
@@ -356,8 +354,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_det_a(self):
         v = self._make_view("det_a")
-        section_title(v, "VIII‑A", "DETENIDOS Y ARRESTADOS — POR DELITO",
-                      f"Semana {self.v_semana.get()}")
+        section_title(v, "VIII-A", "Detenidos y arrestados por delito")
 
         # Panel de ingreso
         _, pf = card(v, "Agregar delito")
@@ -367,28 +364,26 @@ class ViewsMixin:
                  font=(FONT, 10)).grid(row=0, column=0, sticky="w", padx=6, pady=4)
         self._v_del_d  = tk.StringVar()
         tk.Entry(grid, textvariable=self._v_del_d, width=52,
-                 font=(FONT, 10), relief="solid", bd=1).grid(
+                 font=(FONT, 10)).grid(
             row=0, column=1, padx=6, pady=4)
 
         tk.Label(grid, text="Arrestado:", bg=CARD_BG, fg=TEXT_DARK,
                  font=(FONT, 10)).grid(row=0, column=2, sticky="w", padx=(12, 4))
-        self._v_del_a  = tk.IntVar(value=0)
+        self._v_del_a  = tk.StringVar(value="0")
         tk.Entry(grid, textvariable=self._v_del_a, width=7,
-                 font=("Consolas", 11), justify="center",
-                 relief="solid", bd=1).grid(row=0, column=3, padx=4)
+                 font=(FONT_MONO, 11), justify="center").grid(row=0, column=3, padx=4)
 
         tk.Label(grid, text="Detenido:", bg=CARD_BG, fg=TEXT_DARK,
                  font=(FONT, 10)).grid(row=0, column=4, sticky="w", padx=(12, 4))
-        self._v_del_dt = tk.IntVar(value=0)
+        self._v_del_dt = tk.StringVar(value="0")
         tk.Entry(grid, textvariable=self._v_del_dt, width=7,
-                 font=("Consolas", 11), justify="center",
-                 relief="solid", bd=1).grid(row=0, column=5, padx=4)
+                 font=(FONT_MONO, 11), justify="center").grid(row=0, column=5, padx=4)
 
-        brow = tk.Frame(pf, bg=CARD_BG); brow.pack(pady=6)
-        action_btn(brow, "➕  Agregar fila",
-                   self._add_det_a, SUCCESS).pack(side="left", padx=4)
-        action_btn(brow, "🗑  Eliminar seleccionado",
-                   self._del_det_a, DANGER).pack(side="left", padx=4)
+        brow = tk.Frame(pf, bg=CARD_BG); brow.pack(anchor="w", pady=(8, 0))
+        Boton(brow, "Agregar fila",
+              self._add_det_a, "success").pack(side="left", padx=(0, 8))
+        Boton(brow, "Eliminar seleccionado",
+              self._del_det_a, "danger").pack(side="left")
 
         # Tabla
         _, c = card(v, "Registro de Detenidos por Delito")
@@ -406,15 +401,15 @@ class ViewsMixin:
         if not delito:
             messagebox.showwarning("Datos incompletos", "Ingrese el nombre del delito.")
             return
-        arr = self._v_del_a.get()
-        det = self._v_del_dt.get()
+        arr = safe_int(self._v_del_a.get())
+        det = safe_int(self._v_del_dt.get())
         # Insertar antes de la fila TOTAL
         children = list(self.t_det_a.get_children())
         total_row = next((r for r in children
                           if "total" in self.t_det_a.item(r,"tags")), None)
         idx = children.index(total_row) if total_row else "end"
         self.t_det_a.insert("", idx, values=(delito, fmt(arr), fmt(det), fmt(arr+det)))
-        self._v_del_d.set(""); self._v_del_a.set(0); self._v_del_dt.set(0)
+        self._v_del_d.set(""); self._v_del_a.set("0"); self._v_del_dt.set("0")
         self._recalc_det_a()
         self._doc_cambio()
 
@@ -449,8 +444,7 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_det_b(self):
         v = self._make_view("det_b")
-        section_title(v, "VIII‑B", "DETENIDOS Y ARRESTADOS — POR PREFECTURA",
-                      f"Semana {self.v_semana.get()}")
+        section_title(v, "VIII-B", "Detenidos y arrestados por prefectura")
 
         _, c = card(v, "Semana — Arrestados y Detenidos por Prefectura")
         hint_label(c, "Doble clic para editar · Total semana = Arrestado + Detenido")
@@ -485,8 +479,8 @@ class ViewsMixin:
     # =========================================================================
     def _build_v_det_c(self):
         v = self._make_view("det_c")
-        section_title(v, "VIII‑C",
-                      f"DETENIDOS {ANO_ACT} A LA FECHA — POR PREFECTURA")
+        section_title(v, "VIII-C",
+                      f"Detenidos {ANO_ACT} a la fecha, por prefectura")
 
         _, c = card(v, f"Acumulado {ANO_ACT} — Arrestados y Detenidos por Prefectura")
         hint_label(c, "Doble clic para editar")

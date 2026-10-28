@@ -13,7 +13,9 @@ from __future__ import annotations
 import copy
 import io
 import math
+import os
 import re
+import tempfile
 
 from lxml import etree
 from pptx import Presentation
@@ -72,8 +74,18 @@ TABLAS = {
 # ═════════════════════════════════════════════════════════════════════════════
 # TEXTO
 # ═════════════════════════════════════════════════════════════════════════════
+_INVALIDOS = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
+
+
+def _limpio(texto) -> str:
+    """Texto apto para XML: quita caracteres de control que romperían el archivo
+    (por ejemplo los que llegan al pegar desde Word o desde un PDF)."""
+    return _INVALIDOS.sub("", str(texto if texto is not None else ""))
+
+
 def _set_par(p, texto: str):
     """Pone `texto` en un <a:p> conservando el formato de su primer run."""
+    texto = _limpio(texto)
     runs = p.findall(qn("a:r"))
     if runs:
         runs[0].find(qn("a:t")).text = texto
@@ -107,7 +119,7 @@ def _set_celda(tc, texto):
     base = next((p for p in ps if _txt(p)), None)
     if base is None:
         base = next((p for p in ps if p.find(qn("a:r")) is not None), ps[0])
-    lineas = str(texto).split("\n") or [""]
+    lineas = _limpio(texto).split("\n") or [""]
     for p in ps:
         cuerpo.remove(p)
     for ln in lineas:
@@ -268,6 +280,17 @@ def _imagen_flujo(ruta: str):
         return buf, im.size[0], im.size[1]
 
 
+def _motivo(exc) -> str:
+    """Causa legible de un fallo al leer una foto."""
+    if isinstance(exc, FileNotFoundError):
+        return "el archivo ya no existe"
+    if isinstance(exc, PermissionError):
+        return "sin permiso para leerlo"
+    if exc.__class__.__name__ in ("UnidentifiedImageError", "DecompressionBombError"):
+        return "no es una imagen válida o es demasiado grande"
+    return f"{exc.__class__.__name__}: {exc}"
+
+
 def _poner_foto(slide, ruta: str, x, y, w, h, modo="cubrir"):
     buf, iw, ih = _imagen_flujo(ruta)
     if modo == "cubrir":
@@ -397,7 +420,7 @@ def _run(texto, negrita, pt, color="260000"):
     etree.SubElement(relleno, qn("a:srgbClr"), val=color)
     etree.SubElement(rpr, qn("a:latin"), typeface="Arial")
     etree.SubElement(rpr, qn("a:cs"), typeface="Arial")
-    etree.SubElement(r, qn("a:t")).text = texto
+    etree.SubElement(r, qn("a:t")).text = _limpio(texto)
     return r
 
 
@@ -473,7 +496,11 @@ def _lamina_diligencia(prs, proto, rec, avisos):
     cue.left, cue.top, cue.width, cue.height = x_txt, y_cuerpo, ancho, min(alto, libre)
 
     for (x, y, w, h), ruta in zip(_celdas_fotos(len(fotos)), fotos):
-        _poner_foto(sl, ruta, x, y, w, h, modo="ajustar")
+        try:
+            _poner_foto(sl, ruta, x, y, w, h, modo="ajustar")
+        except Exception as exc:
+            avisos.append(f"No se pudo insertar la foto «{os.path.basename(ruta)}» "
+                          f"de la diligencia «{unidad[:40]}»: {_motivo(exc)}")
     return sl
 
 
@@ -534,7 +561,7 @@ def exportar_informe(estado: dict, ruta_salida: str, plantilla: str,
     """
     avisos: list = []
     fotos = fotos or {}
-    semana = estado["semana"].strip()
+    semana = _limpio(estado.get("semana", "")).strip()
     fin_semana = semana.split(" AL ")[-1] if " AL " in semana else semana
     tablas = estado["tablas"]
 
@@ -601,7 +628,7 @@ def exportar_informe(estado: dict, ruta_salida: str, plantilla: str,
             try:
                 _poner_foto(s[n_lam], ruta, x, y, w, h, modo="cubrir")
             except Exception as exc:
-                avisos.append(f"No se pudo insertar la foto «{etiqueta}»: {exc}")
+                avisos.append(f"No se pudo insertar la foto «{etiqueta}»: {_motivo(exc)}")
 
     # Láminas de diligencias (una por recuadro)
     for rec in estado.get("recuadros", []):
@@ -610,5 +637,23 @@ def exportar_informe(estado: dict, ruta_salida: str, plantilla: str,
     _mover_al_final(prs, cierre)
 
     prs.core_properties.title = f"Informe Comité Policial — {semana}"
-    prs.save(ruta_salida)
+    _guardar_seguro(prs, ruta_salida)
     return avisos
+
+
+def _guardar_seguro(prs, destino: str):
+    """Guarda en un archivo temporal, comprueba que se vuelve a abrir y recién
+    entonces reemplaza el destino: un fallo nunca deja un PPTX a medias ni pisa
+    uno bueno."""
+    carpeta = os.path.dirname(os.path.abspath(destino))
+    fd, tmp = tempfile.mkstemp(suffix=".pptx", dir=carpeta)
+    os.close(fd)
+    try:
+        prs.save(tmp)
+        n = len(Presentation(tmp).slides)
+        if n < 2:
+            raise ValueError("el archivo generado quedó incompleto")
+        os.replace(tmp, destino)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)

@@ -15,20 +15,20 @@ class ExtraViewsMixin:
     # ── IV-B. FLUJO MIGRATORIO ───────────────────────────────────────────────
     def _build_v_flujo(self):
         v = self._make_view("flujo")
-        section_title(v, "IV‑B", "FLUJO MIGRATORIO COMPLEJO FRONTERIZO LOS LIBERTADORES",
+        section_title(v, "IV-B", "Flujo migratorio, Complejo Fronterizo Los Libertadores",
                       "Libertadores, Uspallata y Horcones")
         _, c = card(v, "Flujo diario")
         hint_label(c, "Doble clic para editar · ENTRADOS, SALIDOS y TOTAL se calculan solos")
-        widths = [110, 150, 140, 130, 130, 100, 100, 100, 100]
+        widths = [110, 190, 170, 150, 150, 100, 100, 90, 100]
         self.t_flujo = tree_with_scroll(c, COLS_FLUJO, widths, height=7,
                                         editable=[0, 1, 2, 3, 4, 8],
                                         on_change=self._recalc_flujo)
         self.t_flujo.add_total(["TOTAL"] + ["0"] * 8)
         self.t_flujo.add_fuente("FUENTE: DEMIG LAD", len(COLS_FLUJO))
 
-        bar = tk.Frame(c, bg=CARD_BG); bar.pack(pady=8)
-        action_btn(bar, "➕  Agregar día", self._add_flujo, SUCCESS, small=True).pack(side="left", padx=4)
-        action_btn(bar, "🗑  Eliminar seleccionado", self._del_flujo, DANGER, small=True).pack(side="left", padx=4)
+        bar = tk.Frame(c, bg=CARD_BG); bar.pack(anchor="w", pady=(8, 0))
+        Boton(bar, "Agregar día", self._add_flujo, "success").pack(side="left", padx=(0, 8))
+        Boton(bar, "Eliminar seleccionado", self._del_flujo, "danger").pack(side="left")
 
     def _add_flujo(self):
         t = self.t_flujo
@@ -68,10 +68,9 @@ class ExtraViewsMixin:
     # ── X. DILIGENCIAS DE RELEVANCIA (texto libre) ───────────────────────────
     def _build_v_textox(self):
         v = self._make_view("textox")
-        section_title(v, "X", "DILIGENCIAS DE RELEVANCIA DE LA SEMANA")
+        section_title(v, "X", "Diligencias de relevancia de la semana")
         _, c = card(v, "Resumen de la semana")
         hint_label(c, "Texto libre que va bajo el título «X. Diligencias de relevancia de la semana»")
-        self.txt_x = tk.Text(c, height=10, wrap="word", font=(FONT, 10),
-                             relief="solid", bd=1, padx=8, pady=8)
-        self.txt_x.pack(fill="x", padx=12, pady=10)
+        self.txt_x = tk.Text(c, height=14, wrap="word", padx=10, pady=10)
+        self.txt_x.pack(fill="x", pady=(0, 4))
         self.txt_x.bind("<KeyRelease>", lambda e: self._doc_cambio())

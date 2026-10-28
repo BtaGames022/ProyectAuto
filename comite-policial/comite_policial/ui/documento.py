@@ -3,12 +3,12 @@ import datetime
 import os
 import shutil
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
 from comite_policial.config.settings import settings
 from comite_policial.config.theme import *
 from comite_policial.docio.importador import importar
 from comite_policial.docio.escritor import escribir
-from comite_policial.ui.widgets import action_btn
+from comite_policial.ui.widgets import Boton
 
 # clave del documento -> atributo (Treeview) de la aplicación
 TREES = {
@@ -18,6 +18,17 @@ TREES = {
     "veh_e": "t_veh_e", "veh_t": "t_veh_t", "brisex": "t_brisex",
     "bandas": "t_bandas", "det_a": "t_det_a", "det_b": "t_det_b",
     "det_c": "t_det_c",
+}
+
+
+NOMBRES_TABLAS = {
+    "armas": "I. Armas", "drogas_g": "II. Droga en gramos", "drogas_p": "II. Droga en plantas",
+    "homi_a": "III-A. Homicidios por brigada", "homi_b": "III-B. Modalidad",
+    "homi_c": "III-C. Resultado", "migr": "IV. Migraciones", "flujo": "IV-B. Flujo migratorio",
+    "veh_e": "V. Vehículos por estado", "veh_t": "V. Vehículos por tipo",
+    "brisex": "VI. Delitos sexuales", "bandas": "VII. Bandas",
+    "det_a": "VIII-A. Detenidos por delito", "det_b": "VIII-B. Detenidos por prefectura",
+    "det_c": "VIII-C. Acumulado del año",
 }
 
 
@@ -32,24 +43,26 @@ class DocumentoMixin:
         self.v_sync = tk.BooleanVar(value=True)
         self.v_docname = tk.StringVar(value="Sin documento importado")
 
-    # ── Interfaz (panel del menú lateral) ────────────────────────────────────
+    # ── Interfaz (panel fijo al pie del menú lateral) ────────────────────────
     def _build_doc_panel(self, sb):
-        tk.Label(sb, text="DOCUMENTO", bg=SIDEBAR_BG, fg="#4a7ab5",
-                 font=(FONT, 7, "bold"), padx=10, anchor="w").pack(fill="x", pady=(8, 2))
-        box = tk.Frame(sb, bg=SIDEBAR_BG)
-        box.pack(fill="x", padx=8)
-        action_btn(box, "📂  Importar informe (.docx)", self._doc_importar,
-                   ACCENT, small=True).pack(fill="x", pady=2)
-        action_btn(box, "💾  Guardar en el documento",
-                   lambda: self._doc_guardar(auto=False), TEAL, small=True
-                   ).pack(fill="x", pady=2)
-        tk.Checkbutton(box, text="Sincronizar automáticamente", variable=self.v_sync,
-                       bg=SIDEBAR_BG, fg=TEXT_LIGHT, selectcolor=SIDEBAR_HOV,
-                       activebackground=SIDEBAR_BG, activeforeground=TEXT_WHITE,
-                       font=(FONT, 8), anchor="w",
-                       command=self._doc_cambio).pack(fill="x", pady=(4, 0))
-        tk.Label(box, textvariable=self.v_docname, bg=SIDEBAR_BG, fg="#7aa2d6",
-                 font=(FONT, 8, "italic"), anchor="w", wraplength=210,
+        caja = tk.Frame(sb, bg=NAVY_DEEP)
+        caja.pack(side="bottom", fill="x")
+        tk.Frame(caja, bg="#1D3470", height=1).pack(fill="x", padx=18)
+        tk.Label(caja, text="DOCUMENTO WORD", bg=NAVY_DEEP, fg="#9FB1DC",
+                 font=(FONT, 8, "bold"), anchor="w", padx=18
+                 ).pack(fill="x", pady=(10, 4))
+        box = tk.Frame(caja, bg=NAVY_DEEP)
+        box.pack(fill="x", padx=16, pady=(0, 14))
+        Boton(box, "Importar informe (.docx)", self._doc_importar, "side",
+              chico=True).pack(fill="x", pady=2)
+        Boton(box, "Guardar en el documento",
+              lambda: self._doc_guardar(auto=False), "side", chico=True
+              ).pack(fill="x", pady=2)
+        ttk.Checkbutton(box, text="Sincronizar automáticamente", variable=self.v_sync,
+                        command=self._doc_cambio, style="TCheckbutton"
+                        ).pack(fill="x", pady=(6, 0))
+        tk.Label(box, textvariable=self.v_docname, bg=NAVY_DEEP, fg="#9FB1DC",
+                 font=(FONT, 8, "italic"), anchor="w", wraplength=200,
                  justify="left").pack(fill="x", pady=(2, 0))
 
     # ── Importar ─────────────────────────────────────────────────────────────
@@ -63,8 +76,25 @@ class DocumentoMixin:
             with open(ruta, "rb") as fh:
                 base = fh.read()
             estado = importar(base)
+        except PermissionError:
+            messagebox.showerror("No se pudo importar",
+                                 "No hay permiso para leer el archivo. "
+                                 "Revisa que no esté protegido o en uso.")
+            return
+        except FileNotFoundError:
+            messagebox.showerror("No se pudo importar", "El archivo ya no existe.")
+            return
         except Exception as exc:
-            messagebox.showerror("No se pudo importar", f"{type(exc).__name__}: {exc}")
+            messagebox.showerror(
+                "No se pudo importar",
+                "El archivo no es un informe .docx válido (o está dañado).\n\n"
+                f"Detalle: {type(exc).__name__}: {exc}")
+            return
+        if not estado["tablas"] and not estado["recuadros"]:
+            messagebox.showwarning(
+                "Documento sin datos reconocibles",
+                "No se encontró ninguna tabla ni recuadro del informe en ese archivo. "
+                "Verifica que sea el informe semanal del comité.")
             return
 
         # Respaldo del original antes de tocarlo
@@ -81,15 +111,21 @@ class DocumentoMixin:
 
         self._doc = {"path": ruta, "bytes": base, "import": estado}
         self._doc_aplicar(estado)
-        self.v_docname.set(f"📄 {os.path.basename(ruta)}")
+        self.v_docname.set(f"Documento: {os.path.basename(ruta)}")
         self._switch("armas")
         n_t = len(estado["tablas"]); n_r = len(estado["recuadros"])
-        self.v_status.set(f"✅  Documento importado: {n_t} tablas, {n_r} recuadros")
-        messagebox.showinfo(
-            "Documento importado",
-            f"Se cargaron {n_t} tablas y {n_r} recuadros de concurrencias.\n\n"
-            f"Los cambios que hagas en la aplicación se escribirán en:\n{ruta}\n\n"
-            + (f"Respaldo del original:\n{respaldo}" if respaldo else ""))
+        self.v_status.set(f"Documento importado: {n_t} tablas, {n_r} recuadros")
+        faltan = [n for k, n in NOMBRES_TABLAS.items()
+                  if k not in estado["tablas"] and k != "homi_d"]
+        msg = (f"Se cargaron {n_t} tablas y {n_r} recuadros de concurrencias.\n\n"
+               f"Los cambios que hagas en la aplicación se escribirán en:\n{ruta}\n\n")
+        if respaldo:
+            msg += f"Respaldo del original:\n{respaldo}\n\n"
+        if faltan:
+            msg += ("No se encontraron en el documento (quedan con sus valores "
+                    "actuales y no se escriben en el Word):\n• " + "\n• ".join(faltan))
+        (messagebox.showwarning if faltan else messagebox.showinfo)(
+            "Documento importado", msg.strip())
 
     def _doc_aplicar(self, estado: dict):
         """Vuelca el estado leído del documento en las vistas de la aplicación."""
@@ -149,6 +185,8 @@ class DocumentoMixin:
     # ── Sincronización ───────────────────────────────────────────────────────
     def _doc_cambio(self, *_):
         """Se llama ante cualquier cambio de datos; guarda con un breve retardo."""
+        if hasattr(self, "_nav"):
+            self._nav_estado_later()
         if self._doc is None or self._importando or not self.v_sync.get():
             return
         if self._doc_after:
@@ -166,14 +204,14 @@ class DocumentoMixin:
         try:
             escribir(d["bytes"], self._doc_estado(), d["import"], d["path"])
             self.v_status.set(
-                f"✅  Documento actualizado ({datetime.datetime.now():%H:%M:%S})")
+                f"Documento actualizado ({datetime.datetime.now():%H:%M:%S})")
         except PermissionError:
             msg = ("No se pudo escribir el documento: está abierto en Word. "
                    "Ciérralo y vuelve a guardar.")
-            self.v_status.set("⚠️  " + msg)
+            self.v_status.set(msg)
             if not auto:
                 messagebox.showwarning("Documento en uso", msg)
         except Exception as exc:
-            self.v_status.set(f"❌  Error al guardar en el documento: {exc}")
+            self.v_status.set(f"Error al guardar en el documento: {exc}")
             if not auto:
                 messagebox.showerror("Error al guardar", f"{type(exc).__name__}: {exc}")

@@ -12,7 +12,7 @@ from comite_policial.ui.widgets import *
 from comite_policial.ui.calendarios import CalendarPopup
 
 
-CASILLA_SI, CASILLA_NO = "☑", "☐"
+CASILLA_SI, CASILLA_NO = "Sí", "No"
 
 
 class RecuadrosMixin:
@@ -30,125 +30,132 @@ class RecuadrosMixin:
         self._rec_after = None
 
         v = self._make_view("recuadros")
-        section_title(v, "IX", "CONCURRENCIAS Y DILIGENCIAS RELEVANTES",
-                      "recuadros del informe")
+        section_title(v, "IX", "Concurrencias y diligencias relevantes",
+                      "una lámina por recuadro en el PowerPoint")
 
         # ── Lista ────────────────────────────────────────────────────────────
-        _, c = card(v, "Recuadros registrados (en el orden en que saldrán en el informe)")
-        hint_label(c, "Selecciona uno y pulsa «Editar» (o doble clic) para modificarlo. "
-                      "La casilla PPT elige qué recuadros se exportan al PowerPoint")
+        _, c = card(v, "Recuadros registrados")
+        hint_label(c, "Salen en este orden. «PPT» indica si el recuadro se exporta al "
+                      "PowerPoint (clic en la columna para cambiarlo). Doble clic para editar.")
         cols = ["PPT", "N°", "UNIDAD", "TIPO", "FECHA", "LUGAR", "DETENIDOS"]
-        widths = [50, 45, 330, 260, 100, 200, 110]
-        self.t_rec = tree_with_scroll(c, cols, widths, height=5, editable=[99])
+        widths = [50, 44, 300, 230, 90, 170, 100]
+        self.t_rec = tree_with_scroll(c, cols, widths, height=8, min_rows=4,
+                                      editable=[99])
         self.t_rec.bind("<Button-1>", self._rec_click_casilla, add="+")
         self.t_rec.bind("<Double-1>", self._rec_doble_clic, add="+")
         self.v_rec_pptx = tk.StringVar()
-        tk.Label(c, textvariable=self.v_rec_pptx, bg=CARD_BG, fg=TEXT_MID,
-                 font=(FONT, 9, "bold")).pack(anchor="w", padx=14)
+        tk.Label(c, textvariable=self.v_rec_pptx, bg=SURFACE, fg=INK_MID,
+                 font=(FONT, SIZE_SMALL, "bold"), anchor="w").pack(fill="x")
 
-        bar = tk.Frame(c, bg=CARD_BG)
-        bar.pack(pady=8)
-        for txt, cmd, col in [
-            ("✚ Nuevo", self._rec_nuevo, ACCENT),
-            ("✏ Editar", self._rec_editar, TEAL),
-            ("⧉ Duplicar", self._rec_duplicar, PURPLE),
-            ("▲ Subir", lambda: self._rec_mover(-1), TEXT_MID),
-            ("▼ Bajar", lambda: self._rec_mover(1), TEXT_MID),
-            ("🗑 Eliminar", self._rec_eliminar, DANGER),
-            ("☑ Todas al PPT", lambda: self._rec_marcar_todas(True), SUCCESS),
-            ("☐ Ninguna al PPT", lambda: self._rec_marcar_todas(False), TEXT_MID),
+        bar = tk.Frame(c, bg=SURFACE)
+        bar.pack(fill="x", pady=(10, 0))
+        for txt, cmd, tipo in [
+            ("Nuevo", self._rec_nuevo, "primary"),
+            ("Editar", self._rec_editar, "secondary"),
+            ("Duplicar", self._rec_duplicar, "secondary"),
+            ("Subir", lambda: self._rec_mover(-1), "secondary"),
+            ("Bajar", lambda: self._rec_mover(1), "secondary"),
+            ("Eliminar", self._rec_eliminar, "danger"),
         ]:
-            action_btn(bar, txt, cmd, col, small=True).pack(side="left", padx=4)
+            Boton(bar, txt, cmd, tipo, chico=True).pack(side="left", padx=(0, 6))
+        Boton(bar, "Ninguna al PPT", lambda: self._rec_marcar_todas(False), "ghost",
+              chico=True).pack(side="right")
+        Boton(bar, "Todas al PPT", lambda: self._rec_marcar_todas(True), "ghost",
+              chico=True).pack(side="right", padx=(0, 6))
 
         # ── Editor ───────────────────────────────────────────────────────────
-        self._rec_card_title = tk.StringVar(value="Editor del recuadro — NUEVO")
-        _, e = card(v, "Editor del recuadro")
-        tk.Label(e, textvariable=self._rec_card_title, bg="#eff6ff", fg="#1d4ed8",
-                 font=(FONT, 9, "bold"), anchor="w", padx=12, pady=5
-                 ).pack(fill="x", padx=12, pady=(10, 0))
-        body = tk.Frame(e, bg=CARD_BG)
-        body.pack(fill="x", padx=12, pady=10)
-
-        # Columna izquierda: encabezado del recuadro
-        izq = tk.LabelFrame(body, text="  Columna izquierda (encabezado)  ",
-                            bg=CARD_BG, fg=ACCENT2, font=(FONT, 9, "bold"),
-                            padx=10, pady=8)
-        izq.pack(side="left", fill="y", padx=(0, 12))
+        self._rec_card_title = tk.StringVar(value="Nuevo recuadro")
+        borde = tk.Frame(v, bg=LINE)
+        borde.pack(fill="x", padx=20, pady=(0, 12))
+        e = tk.Frame(borde, bg=SURFACE)
+        e.pack(fill="both", expand=True, padx=1, pady=1)
+        tk.Label(e, textvariable=self._rec_card_title, bg=SURFACE, fg=NAVY,
+                 font=(FONT, SIZE_BASE + 1, "bold"), anchor="w", padx=16, pady=11
+                 ).pack(fill="x")
+        tk.Frame(e, bg=LINE, height=1).pack(fill="x")
+        body = tk.Frame(e, bg=SURFACE, padx=16, pady=14)
+        body.pack(fill="x")
+        body.grid_columnconfigure(1, weight=1)
 
         self.rv_tipo = tk.StringVar(value=TIPO_DEFECTO)
         self.rv_unidad = tk.StringVar()
         self.rv_grupo = tk.StringVar()
         self.rv_det = tk.StringVar()
 
+        # Columna izquierda: encabezado del recuadro
+        izq = tk.Frame(body, bg=SURFACE)
+        izq.grid(row=0, column=0, sticky="n", padx=(0, 28))
+        tk.Label(izq, text="Encabezado", bg=SURFACE, fg=INK, anchor="w",
+                 font=(FONT, SIZE_BASE, "bold")).pack(fill="x", pady=(0, 8))
+
         self._rec_lbl(izq, "Tipo de procedimiento")
         cb = ttk.Combobox(izq, textvariable=self.rv_tipo, state="readonly",
-                          values=list(TIPOS_RECUADRO) + [TIPO_IMPORTADO], width=42, font=(FONT, 9))
-        cb.pack(anchor="w", pady=(0, 6))
+                          values=list(TIPOS_RECUADRO) + [TIPO_IMPORTADO], width=40,
+                          font=(FONT, SIZE_BASE))
+        cb.pack(anchor="w", pady=(2, 10))
         cb.bind("<<ComboboxSelected>>", lambda e: self._rec_cambiar_tipo())
 
         self._rec_lbl(izq, "Unidad / Brigada")
         ttk.Combobox(izq, textvariable=self.rv_unidad, values=UNIDADES_RECUADRO,
-                     width=42, font=(FONT, 9)).pack(anchor="w", pady=(0, 6))
+                     width=40, font=(FONT, SIZE_BASE)).pack(anchor="w", pady=(2, 10))
 
-        fila = tk.Frame(izq, bg=CARD_BG)
-        fila.pack(anchor="w", fill="x", pady=(0, 6))
-        c1 = tk.Frame(fila, bg=CARD_BG); c1.pack(side="left", padx=(0, 10))
+        fila = tk.Frame(izq, bg=SURFACE)
+        fila.pack(anchor="w", fill="x", pady=(0, 10))
+        c1 = tk.Frame(fila, bg=SURFACE)
+        c1.pack(side="left", padx=(0, 12))
         self._rec_lbl(c1, "Grupo (opcional)")
         ttk.Combobox(c1, textvariable=self.rv_grupo, values=GRUPOS_RECUADRO,
-                     width=18, font=(FONT, 9)).pack()
-        c2 = tk.Frame(fila, bg=CARD_BG); c2.pack(side="left")
+                     width=22, font=(FONT, SIZE_BASE)).pack(pady=(2, 0))
+        c2 = tk.Frame(fila, bg=SURFACE)
+        c2.pack(side="left")
         self._rec_lbl(c2, "N.º detenidos")
-        tk.Entry(c2, textvariable=self.rv_det, width=8, font=(FONT, 10),
-                 justify="center", relief="solid", bd=1).pack()
+        tk.Entry(c2, textvariable=self.rv_det, width=8, justify="center"
+                 ).pack(pady=(2, 0), ipady=4)
 
-        self._rec_lbl(izq, "Título / delito (una línea por renglón)")
-        self.rv_titulo = tk.Text(izq, width=44, height=4, font=(FONT, 9),
-                                 relief="solid", bd=1, wrap="word")
-        self.rv_titulo.pack(anchor="w")
+        self._rec_lbl(izq, "Título o delito (una línea por renglón)")
+        self.rv_titulo = tk.Text(izq, width=44, height=4, wrap="word", padx=6, pady=4)
+        self.rv_titulo.pack(anchor="w", pady=(2, 10))
 
         self._rec_lbl(izq, "Fotos para el PowerPoint (opcional)")
-        fotos = tk.Frame(izq, bg=CARD_BG)
-        fotos.pack(anchor="w", fill="x")
+        fotos = tk.Frame(izq, bg=SURFACE)
+        fotos.pack(anchor="w", fill="x", pady=(4, 0))
+        Boton(fotos, "Agregar fotos", self._rec_fotos_agregar, "secondary",
+              chico=True).pack(side="left")
+        Boton(fotos, "Quitar", self._rec_fotos_quitar, "ghost",
+              chico=True).pack(side="left", padx=6)
         self._rec_fotos_txt = tk.StringVar()
-        tk.Label(fotos, textvariable=self._rec_fotos_txt, bg=CARD_BG, fg=TEXT_MID,
-                 font=(FONT, 9, "italic"), anchor="w", wraplength=260, justify="left"
-                 ).pack(side="left", padx=(0, 8))
-        action_btn(fotos, "➕ Agregar", self._rec_fotos_agregar, ACCENT,
-                   small=True).pack(side="left", padx=2)
-        action_btn(fotos, "Quitar", self._rec_fotos_quitar, TEXT_MID,
-                   small=True).pack(side="left", padx=2)
+        tk.Label(fotos, textvariable=self._rec_fotos_txt, bg=SURFACE, fg=INK_MID,
+                 font=(FONT, SIZE_SMALL), anchor="w").pack(side="left", padx=4)
 
         # Columna derecha: campos dinámicos según el tipo
-        der = tk.LabelFrame(body, text="  Columna derecha (detalle)  ",
-                            bg=CARD_BG, fg=ACCENT2, font=(FONT, 9, "bold"),
-                            padx=10, pady=8)
-        der.pack(side="left", fill="both", expand=True)
-        self._rec_campos_frame = tk.Frame(der, bg=CARD_BG)
+        der = tk.Frame(body, bg=SURFACE)
+        der.grid(row=0, column=1, sticky="nsew")
+        tk.Label(der, text="Detalle", bg=SURFACE, fg=INK, anchor="w",
+                 font=(FONT, SIZE_BASE, "bold")).pack(fill="x", pady=(0, 8))
+        self._rec_campos_frame = tk.Frame(der, bg=SURFACE)
         self._rec_campos_frame.pack(fill="both", expand=True)
 
-        # Botones del editor
-        eb = tk.Frame(e, bg=CARD_BG)
-        eb.pack(pady=(0, 10))
-        action_btn(eb, "💾 Guardar recuadro", self._rec_guardar, SUCCESS).pack(side="left", padx=4)
-        action_btn(eb, "↺ Limpiar formulario", self._rec_nuevo, TEXT_MID).pack(side="left", padx=4)
+        eb = tk.Frame(e, bg=SURFACE)
+        eb.pack(fill="x", padx=16, pady=(0, 16))
+        Boton(eb, "Guardar recuadro", self._rec_guardar, "success").pack(side="left")
+        Boton(eb, "Limpiar formulario", self._rec_nuevo, "secondary"
+              ).pack(side="left", padx=8)
 
         # ── Vista previa ─────────────────────────────────────────────────────
-        _, p = card(v, "Vista previa (así se verá en Word)", accent_color=SUCCESS)
+        _, p = card(v, "Vista previa (así se verá en el Word)")
         marco = tk.Frame(p, bg="#000000", padx=2, pady=2)
-        marco.pack(fill="x", padx=14, pady=12)
-        self._pv_izq = tk.Text(marco, width=26, bg="#ffffff", fg="#000000",
-                               font=("Arial", 9, "bold"), relief="flat", bd=0,
-                               wrap="word", padx=10, pady=10, cursor="arrow",
-                               height=10)
+        marco.pack(fill="x")
+        txt = dict(bg="#FFFFFF", fg="#000000", relief="flat", bd=0, wrap="word",
+                   padx=10, pady=10, cursor="arrow", highlightthickness=0)
+        self._pv_izq = tk.Text(marco, width=26, font=("Arial", 9, "bold"), height=10, **txt)
         self._pv_izq.pack(side="left", fill="y", padx=(0, 2))
-        self._pv_der = tk.Text(marco, bg="#ffffff", fg="#000000",
-                               font=("Arial", 9), relief="flat", bd=0,
-                               wrap="word", padx=10, pady=10, cursor="arrow",
-                               height=10)
+        self._pv_der = tk.Text(marco, font=("Arial", 9), height=10, **txt)
         self._pv_der.pack(side="left", fill="both", expand=True)
         self._pv_izq.tag_configure("c", justify="center")
         self._pv_der.tag_configure("b", font=("Arial", 9, "bold"))
         self._pv_der.tag_configure("j", justify="left")
+        # al mostrarse la vista el ancho ya es real: se recalcula el alto
+        self._pv_der.bind("<Map>", lambda e: self._rec_preview_later())
 
         for var in (self.rv_unidad, self.rv_grupo, self.rv_det):
             var.trace_add("write", lambda *a: self._rec_preview_later())
@@ -164,45 +171,42 @@ class RecuadrosMixin:
     # =========================================================================
     @staticmethod
     def _rec_lbl(parent, texto):
-        tk.Label(parent, text=texto, bg=CARD_BG, fg=TEXT_MID,
-                 font=(FONT, 8, "bold")).pack(anchor="w")
+        etiqueta(parent, texto).pack(anchor="w")
 
     def _rec_construir_campos(self, valores: dict, fecha_def=""):
         for w in self._rec_campos_frame.winfo_children():
             w.destroy()
         self._rec_widgets = {}
-        for etiqueta, clase in self._rec_defs_actuales():
-            fila = tk.Frame(self._rec_campos_frame, bg=CARD_BG)
-            fila.pack(fill="x", pady=2)
-            tk.Label(fila, text=etiqueta + ":", bg=CARD_BG, fg=TEXT_DARK,
-                     font=(FONT, 9, "bold"), width=19, anchor="nw"
-                     ).pack(side="left", anchor="n")
-            val = valores.get(etiqueta, fecha_def if etiqueta == "Fecha" else "")
+        cf = self._rec_campos_frame
+        cf.grid_columnconfigure(1, weight=1)
+        for i, (nombre, clase) in enumerate(self._rec_defs_actuales()):
+            tk.Label(cf, text=nombre, bg=SURFACE, fg=INK, font=(FONT, SIZE_SMALL, "bold"),
+                     anchor="ne", justify="right", width=20, wraplength=150
+                     ).grid(row=i, column=0, sticky="ne", padx=(0, 10), pady=(7, 0))
+            val = valores.get(nombre, fecha_def if nombre == "Fecha" else "")
             if clase == "linea":
-                ent = tk.Entry(fila, font=(FONT, 10), relief="solid", bd=1)
+                ent = tk.Entry(cf)
                 ent.insert(0, val)
-                ent.pack(side="left", fill="x", expand=True, ipady=2)
+                ent.grid(row=i, column=1, sticky="ew", pady=3, ipady=4)
                 ent.bind("<KeyRelease>", lambda e: self._rec_preview_later())
-                if etiqueta == "Fecha":
-                    b = action_btn(fila, "🗓", lambda en=ent: self._rec_elegir_fecha(en),
-                                   ACCENT, small=True)
-                    b.pack(side="left", padx=(6, 0))
-                self._rec_widgets[etiqueta] = (ent, clase)
+                if nombre == "Fecha":
+                    Boton(cf, "Calendario", lambda en=ent: self._rec_elegir_fecha(en),
+                          "secondary", chico=True).grid(row=i, column=2, padx=(8, 0))
+                self._rec_widgets[nombre] = (ent, clase)
             else:
-                alto = 3 if clase == "parrafo" else 3
-                txt = tk.Text(fila, font=(FONT, 9), height=alto, wrap="word",
-                              relief="solid", bd=1)
+                txt = tk.Text(cf, height=3, wrap="word", padx=6, pady=4)
                 txt.insert("1.0", val)
-                txt.pack(side="left", fill="x", expand=True)
+                txt.grid(row=i, column=1, sticky="ew", pady=3)
                 txt.bind("<KeyRelease>", lambda e: self._rec_preview_later())
-                self._rec_widgets[etiqueta] = (txt, clase)
+                self._rec_widgets[nombre] = (txt, clase)
                 if clase == "lista":
-                    tk.Label(fila, text="un ítem\npor línea", bg=CARD_BG,
-                             fg=TEXT_LIGHT, font=(FONT, 7)).pack(side="left", padx=4)
+                    tk.Label(cf, text="un ítem\npor línea", bg=SURFACE, fg=INK_SOFT,
+                             font=(FONT, 8), justify="left"
+                             ).grid(row=i, column=2, padx=(8, 0), sticky="w")
 
     def _rec_fotos_refrescar(self):
         n = len(self._rec_fotos)
-        self._rec_fotos_txt.set("sin fotos" if not n else
+        self._rec_fotos_txt.set("Sin fotos" if not n else
                                 f"{n} foto" + ("" if n == 1 else "s"))
 
     def _rec_fotos_agregar(self):
@@ -277,14 +281,19 @@ class RecuadrosMixin:
                 der.insert("end", "\n")
             for texto, negrita in par:
                 der.insert("end", texto, "b" if negrita else "")
-        self.update_idletasks()
+        # Alto según el contenido, pero acotado: con la vista oculta el ancho es
+        # 1 px y cada letra contaría como una línea (el widget crecía sin límite).
+        if der.winfo_ismapped() and der.winfo_width() > 50:
+            self.update_idletasks()
+            alturas = []
+            for t in (izq, der):
+                n = t.count("1.0", "end", "displaylines")
+                alturas.append(n[0] if n else 1)
+            h = max(6, min(max(alturas) + 1, 24))
+        else:
+            h = 8
         for t in (izq, der):
-            n = t.count("1.0", "end", "displaylines")
-            lineas = (n[0] if n else 1)
-            t.configure(height=max(lineas + 1, 6), state="disabled")
-        # igualar alturas
-        h = max(int(izq.cget("height")), int(der.cget("height")))
-        izq.configure(height=h); der.configure(height=h)
+            t.configure(height=h, state="disabled")
 
     # =========================================================================
     # CRUD
@@ -331,7 +340,10 @@ class RecuadrosMixin:
     # ── Selección de recuadros para el PowerPoint ────────────────────────────
     def _rec_actualizar_contador(self):
         n = sum(1 for r in self.recuadros if r.get("en_pptx", True))
-        self.v_rec_pptx.set(f"Se exportarán {n} de {len(self.recuadros)} recuadros al PowerPoint")
+        total = len(self.recuadros)
+        self.v_rec_pptx.set("Aún no hay recuadros: completa el formulario y guarda el primero."
+                            if not total else
+                            f"Se exportarán {n} de {total} recuadros al PowerPoint.")
 
     def _rec_click_casilla(self, event):
         """Un clic en la columna PPT marca/desmarca el recuadro."""
@@ -368,7 +380,7 @@ class RecuadrosMixin:
 
     def _rec_nuevo(self):
         self._rec_idx = None
-        self._rec_card_title.set("Editor del recuadro — NUEVO")
+        self._rec_card_title.set("Nuevo recuadro")
         self.rv_tipo.set(TIPO_DEFECTO)
         self.rv_unidad.set(""); self.rv_grupo.set(""); self.rv_det.set("")
         self.rv_titulo.delete("1.0", "end")
@@ -395,7 +407,7 @@ class RecuadrosMixin:
             idx = self._rec_idx
         self._rec_refrescar_lista(idx)
         self._doc_cambio()
-        self.v_status.set(f"✅  Recuadro guardado ({len(self.recuadros)} en total)")
+        self.v_status.set(f"Recuadro guardado ({len(self.recuadros)} en total)")
         self._rec_nuevo()
 
     def _rec_editar(self):
@@ -403,7 +415,7 @@ class RecuadrosMixin:
         if i is None:
             return
         self._rec_idx = i
-        self._rec_card_title.set(f"Editor del recuadro — EDITANDO N° {i + 1}")
+        self._rec_card_title.set(f"Editando el recuadro N° {i + 1}")
         self._rec_cargar_form(self.recuadros[i])
 
     def _rec_duplicar(self):

@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-PRUEBAS = ["roundtrip_docx.py", "integracion_docx.py", "smoke_recuadros.py", "pptx_export_test.py"]
+PRUEBAS = ["roundtrip_docx.py", "integracion_docx.py", "smoke_recuadros.py", "pptx_export_test.py", "scroll_test.py", "ui_completa_test.py"]
 env = dict(os.environ, PYTHONIOENCODING="utf-8")
 fallos = []
 for p in PRUEBAS:

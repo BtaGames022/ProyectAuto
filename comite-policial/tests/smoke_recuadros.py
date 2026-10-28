@@ -10,6 +10,7 @@ for _s in (sys.stdout, sys.stderr):
 import tempfile
 
 from comite_policial.ui.app import App
+from comite_policial.ui.recuadros import CASILLA_SI, CASILLA_NO
 from comite_policial.core.recuadros import *
 
 a = App(); a.update()
@@ -41,7 +42,7 @@ assert len(a._estado_pptx()["recuadros"]) == len(a.recuadros)
 a.recuadros[0]["en_pptx"] = False
 assert len(a._estado_pptx()["recuadros"]) == len(a.recuadros) - 1
 a._rec_refrescar_lista(0); a.update()
-assert a.t_rec.raw_values(a.t_rec.get_children()[0])[0] == "\u2610"
+assert a.t_rec.raw_values(a.t_rec.get_children()[0])[0] == CASILLA_NO
 print(a.v_rec_pptx.get())
 a._rec_marcar_todas(False)
 assert a._estado_pptx()["recuadros"] == []

@@ -1,52 +1,86 @@
-"""Paleta de colores y tipografía de la interfaz."""
+"""Sistema visual de la aplicación (identidad PDI).
 
-DARK        = "#0d1b2a"
-SIDEBAR_BG  = "#112240"
-SIDEBAR_HOV = "#1a3a6e"
-HEADER_BG   = "#1e3a5f"
-ACCENT      = "#2563eb"
-ACCENT2     = "#1d4ed8"
-SUCCESS     = "#059669"
-DANGER      = "#dc2626"
-WARNING     = "#d97706"
-PURPLE      = "#7c3aed"
-TEAL        = "#0891b2"
-LIGHT_BG    = "#f0f4f8"
-CARD_BG     = "#ffffff"
-BORDER      = "#e2e8f0"
-TEXT_DARK   = "#0f172a"
-TEXT_MID    = "#475569"
-TEXT_LIGHT  = "#94a3b8"
-TEXT_WHITE  = "#ffffff"
-ROW_ALT     = "#f8fafc"
-ROW_TOTAL   = "#dbeafe"
-ROW_FUENTE  = "#f1f5f9"
-FONT        = "Segoe UI"
+Colores tomados del informe oficial del comité (PowerPoint): azul marino
+institucional, celeste de las tablas y amarillo de acento. Tipografía Arial,
+la misma de los documentos. Los nombres antiguos se conservan como alias para
+no romper el resto del código.
+"""
 
-# PALETA EXTENDIDA PARA TABLAS
-# ──────────────────────────────────────────────────────────────────────────────
-# Filas de datos
-ROW_ODD       = "#ffffff"   # Fila impar — blanco puro
-ROW_EVEN      = "#f0f6ff"   # Fila par — azul muy tenue
-ROW_HOVER_BG  = "#e8f0fe"   # Hover — azul suave
-ROW_SEL_BG    = "#2563eb"   # Seleccionado — azul ACCENT
-ROW_SEL_FG    = "#ffffff"
-# Filas especiales
-ROW_TOTAL_BG  = "#1e3a5f"   # Total — azul PDI
-ROW_TOTAL_FG  = "#ffffff"
-ROW_SUBTOT_BG = "#dbeafe"   # Subtotal — celeste claro
-ROW_SUBTOT_FG = "#1e3a5f"
-ROW_FUENTE_BG = "#f8fafc"   # Fuente — gris muy claro
-ROW_FUENTE_FG = "#94a3b8"
-ROW_HEADER_BG = "#eff6ff"   # Sub-cabecera — azul pálido
-ROW_HEADER_FG = "#1e3a5f"
-# Cabeceras de columna
-HDR_BG        = "#0f2d4e"   # Cabecera — azul marino profundo
-HDR_FG        = "#e2e8f0"
-HDR_FONT      = ("Segoe UI", 10, "bold")
-# Barra de acento sobre la tabla
-ACCENT_BAR    = "#2563eb"
-ACCENT_BAR_H  = 3           # px de altura
-# Borde de tarjeta
-CARD_SHADOW   = "#cbd5e1"
-CARD_BORDER_L = "#3b82f6"   # borde izquierdo coloreado (4px)
+# ── Marca ────────────────────────────────────────────────────────────────────
+NAVY        = "#002060"   # azul institucional (títulos, encabezados de tabla)
+NAVY_DEEP   = "#001540"   # menú lateral
+NAVY_SOFT   = "#0B3080"   # hover sobre azul
+SKY         = "#DAE9F8"   # celeste de las tablas del informe
+SKY_SOFT    = "#EEF4FB"   # filas alternas
+GOLD        = "#FFC000"   # amarillo de acento (activo, foco)
+GOLD_SOFT   = "#FFF2CC"   # selección
+
+# ── Neutros (con un leve tinte azul) ─────────────────────────────────────────
+BG          = "#EDF1F7"   # fondo del área de trabajo
+SURFACE     = "#FFFFFF"   # tarjetas y campos
+LINE        = "#D3DBE8"   # bordes
+LINE_STRONG = "#AAB7CC"   # bordes de campos
+INK         = "#0F1B33"   # texto principal
+INK_MID     = "#46566F"   # texto secundario
+INK_SOFT    = "#7A8AA3"   # ayudas, fuentes
+
+# ── Estados ──────────────────────────────────────────────────────────────────
+OK          = "#1B7A4B"
+OK_SOFT     = "#E3F4EA"
+WARN        = "#B26A00"
+WARN_SOFT   = "#FFF1D6"
+ERR         = "#B3261E"
+ERR_SOFT    = "#FBE5E3"
+
+# ── Tipografía ───────────────────────────────────────────────────────────────
+FONT        = "Arial"
+FONT_MONO   = "Consolas"
+SIZE_BASE   = 10
+SIZE_SMALL  = 9
+SIZE_H1     = 16
+SIZE_H2     = 12
+
+# ── Alias de compatibilidad con el código existente ──────────────────────────
+DARK        = NAVY_DEEP
+SIDEBAR_BG  = NAVY_DEEP
+SIDEBAR_HOV = NAVY_SOFT
+HEADER_BG   = NAVY
+ACCENT      = NAVY
+ACCENT2     = NAVY_SOFT
+SUCCESS     = OK
+DANGER      = ERR
+WARNING     = WARN
+PURPLE      = INK_MID
+TEAL        = INK_MID
+LIGHT_BG    = BG
+CARD_BG     = SURFACE
+BORDER      = LINE
+TEXT_DARK   = INK
+TEXT_MID    = INK_MID
+TEXT_LIGHT  = INK_SOFT
+TEXT_WHITE  = "#FFFFFF"
+ROW_ALT     = SKY_SOFT
+ROW_TOTAL   = SKY
+ROW_FUENTE  = BG
+
+# Tablas (réplica de las del informe PowerPoint)
+ROW_ODD       = SURFACE
+ROW_EVEN      = SKY_SOFT
+ROW_HOVER_BG  = SKY
+ROW_SEL_BG    = GOLD_SOFT
+ROW_SEL_FG    = INK
+ROW_TOTAL_BG  = NAVY
+ROW_TOTAL_FG  = "#FFFFFF"
+ROW_SUBTOT_BG = SKY
+ROW_SUBTOT_FG = NAVY
+ROW_FUENTE_BG = SURFACE
+ROW_FUENTE_FG = INK_SOFT
+ROW_HEADER_BG = SKY
+ROW_HEADER_FG = NAVY
+HDR_BG        = NAVY
+HDR_FG        = "#FFFFFF"
+HDR_FONT      = (FONT, SIZE_BASE, "bold")
+ACCENT_BAR    = NAVY
+ACCENT_BAR_H  = 0
+CARD_SHADOW   = LINE
+CARD_BORDER_L = LINE
