@@ -1,9 +1,10 @@
-"""Vista IX — Concurrencias y Diligencias Relevantes (recuadros de 2 columnas)."""
+"""Vista X — Concurrencias y Diligencias Relevantes (recuadros de 2 columnas)."""
 import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from comite_policial.config.theme import *
 from comite_policial.config.catalogos import *
+from comite_policial.core import tipos_personalizados
 from comite_policial.core.fechas import fecha_corta
 from comite_policial.core.recuadros import (
     TIPO_DEFECTO, TIPO_IMPORTADO, CLAVES_META, nuevo_recuadro, campos_def,
@@ -16,7 +17,7 @@ CASILLA_SI, CASILLA_NO = "Sí", "No"
 
 
 class RecuadrosMixin:
-    """Lista, editor y vista previa de los recuadros de la sección IX."""
+    """Lista, editor y vista previa de los recuadros de la sección X."""
 
     # =========================================================================
     # CONSTRUCCIÓN
@@ -29,8 +30,9 @@ class RecuadrosMixin:
         self._rec_fotos: list[str] = []  # fotos del recuadro (solo para el PowerPoint)
         self._rec_after = None
 
+        tipos_personalizados.cargar()   # formatos incorporados desde informes anteriores
         v = self._make_view("recuadros")
-        section_title(v, "IX", "Concurrencias y diligencias relevantes",
+        section_title(v, "X", "Concurrencias y diligencias relevantes",
                       "una lámina por recuadro en el PowerPoint")
 
         # ── Lista ────────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ class RecuadrosMixin:
                           font=(FONT, SIZE_BASE))
         cb.pack(anchor="w", pady=(2, 10))
         cb.bind("<<ComboboxSelected>>", lambda e: self._rec_cambiar_tipo())
+        self._rec_cb = cb
 
         self._rec_lbl(izq, "Unidad / Brigada")
         ttk.Combobox(izq, textvariable=self.rv_unidad, values=UNIDADES_RECUADRO,
@@ -220,6 +223,10 @@ class RecuadrosMixin:
     def _rec_fotos_quitar(self):
         self._rec_fotos = []
         self._rec_fotos_refrescar()
+
+    def _rec_tipos_refrescar(self):
+        """Actualiza el desplegable con los tipos incorporados desde el documento."""
+        self._rec_cb.configure(values=list(TIPOS_RECUADRO) + [TIPO_IMPORTADO])
 
     def _rec_defs_actuales(self) -> list:
         if self.rv_tipo.get() == TIPO_IMPORTADO:

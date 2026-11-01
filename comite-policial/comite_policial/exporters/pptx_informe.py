@@ -4,7 +4,7 @@ No se dibuja nada desde cero: se abre `plantillas/plantilla_comite.pptx` (el
 informe real sin las fotos de la semana) y se reescriben solo los textos y las
 celdas, de modo que fondo, fuentes, colores, bordes y posiciones son los del
 original. Las láminas de diligencias se clonan de una lámina prototipo, una
-por recuadro de la sección IX.
+por recuadro de la sección X.
 
 Este módulo no depende de la interfaz: recibe el estado como diccionarios.
 """

@@ -11,3 +11,4 @@ output/*
 *.pptx
 !plantillas/*.docx
 !plantillas/plantilla_comite.pptx
+datos/

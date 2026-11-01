@@ -111,7 +111,7 @@ class WordExporterMixin:
 
         texto_x = self.txt_x.get("1.0", "end-1c").strip()
         if texto_x:
-            hx = doc.add_heading("X. DILIGENCIAS DE RELEVANCIA DE LA SEMANA", level=1)
+            hx = doc.add_heading("XI. DILIGENCIAS DE RELEVANCIA DE LA SEMANA", level=1)
             hx.runs[0].font.color.rgb = RGBColor(0x1e, 0x3a, 0x5f)
             for linea in texto_x.split("\n"):
                 doc.add_paragraph(linea)

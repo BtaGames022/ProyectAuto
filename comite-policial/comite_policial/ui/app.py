@@ -34,8 +34,9 @@ MENU = [
     ("DETENIDOS", [("VIII-A", "Por delito", "det_a"),
                    ("VIII-B", "Por prefectura", "det_b"),
                    ("VIII-C", "Acumulado del año", "det_c")]),
-    ("RELEVANTES", [("IX", "Concurrencias y diligencias", "recuadros"),
-                    ("X", "Diligencias de relevancia", "textox")]),
+    ("SERVICIO ESPECIAL", [("IX", "Fiscalización de extranjeros", "servicio")]),
+    ("RELEVANTES", [("X", "Concurrencias y diligencias", "recuadros"),
+                    ("XI", "Diligencias de relevancia", "textox")]),
 ]
 
 # Árboles de cada vista (para saber si la sección ya tiene datos)
@@ -43,6 +44,7 @@ ARBOLES = {
     "armas": ["t_armas"], "drogas": ["t_drogas_g", "t_drogas_p"],
     "homi_a": ["t_homi_a"], "homi_b": ["t_homi_b"], "homi_c": ["t_homi_c"],
     "homi_d": ["t_homi_d"], "migr": ["t_migr"], "flujo": ["t_flujo"],
+    "servicio": ["t_servicio"],
     "vehic": ["t_veh_e", "t_veh_t"], "brisex": ["t_brisex"], "bandas": ["t_bandas"],
     "det_a": ["t_det_a"], "det_b": ["t_det_b"], "det_c": ["t_det_c"],
 }
@@ -318,7 +320,7 @@ class App(ViewsMixin, RecuadrosMixin, ExtraViewsMixin, DocumentoMixin,
                 self._build_v_migr, self._build_v_vehic, self._build_v_brisex,
                 self._build_v_bandas, self._build_v_det_a, self._build_v_det_b,
                 self._build_v_det_c, self._build_v_recuadros, self._build_v_flujo,
-                self._build_v_textox):
+                self._build_v_textox, self._build_v_servicio):
             construir()
         self._switch("armas")
         self._nav_estado()

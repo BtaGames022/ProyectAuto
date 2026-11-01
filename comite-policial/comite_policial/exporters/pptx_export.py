@@ -37,6 +37,10 @@ class PptxExporterMixin:
                     total = vals
                 else:
                     rows.append(vals)
+            if clave == "migr":
+                # la plantilla del PowerPoint no tiene la columna EXTENAS (índice 6)
+                rows = [r[:6] + r[7:] for r in rows]
+                total = total[:6] + total[7:] if total else total
             tablas[clave] = {"rows": rows, "total": total}
         return tablas
 
@@ -133,7 +137,7 @@ class PptxExporterMixin:
                  font=(FONT, SIZE_H2, "bold")).pack(anchor="w", padx=20, pady=(18, 2))
         tk.Label(win, text="Cada foto se recorta para llenar su marco, como en el informe. "
                  "Un marco sin foto queda vacío.\nLas fotos de las diligencias se agregan "
-                 "en cada recuadro (sección IX).",
+                 "en cada recuadro (sección X).",
                  bg=BG, fg=INK_MID, font=(FONT, SIZE_SMALL), justify="left"
                  ).pack(anchor="w", padx=20, pady=(0, 10))
 

@@ -7,7 +7,7 @@ from docx.oxml.ns import qn
 
 from comite_policial.core.recuadros import (TIPO_IMPORTADO, contenido)
 from comite_policial.docio.mapa import detectar, bloque_texto_x
-from comite_policial.docio.semana import semana_normalizada
+from comite_policial.docio.semana import semana_normalizada, SERV_FECHAS_RE
 from comite_policial.docio.xml import (W_P, W_TR, cell_text, par_runs, par_text,
                                        phys_cells, norm)
 
@@ -77,8 +77,8 @@ def _parse_derecha(tc):
     return campos, defs
 
 
-def parse_recuadro(tbl, indice: int) -> dict:
-    tr = tbl.findall(W_TR)[0]
+def parse_recuadro(tr, indice: int) -> dict:
+    """`tr`: fila (w:tr) del recuadro."""
     izq, der = phys_cells(tr)
     unidad, grupo, det, titulo = _parse_izquierda(izq)
     campos, defs = _parse_derecha(der)
@@ -93,7 +93,7 @@ def importar(origen) -> dict:
     """Lee el documento y devuelve el estado completo de la aplicación."""
     doc = abrir(origen)
     estado = {"semana": "", "turno": "", "tablas": {}, "recuadros": [],
-              "texto_x": ""}
+              "texto_x": "", "servicio_fechas": ""}
 
     for p in doc.paragraphs:
         t = p.text.strip()
@@ -101,12 +101,21 @@ def importar(origen) -> dict:
             estado["semana"] = semana_normalizada(t)
         elif not estado["turno"] and norm(t).startswith("TURNO"):
             estado["turno"] = t.split(":", 1)[1].strip() if ":" in t else t
+        elif not estado["servicio_fechas"] and "SERVICIO ESPECIAL DE FISCALIZACION" in norm(t):
+            m = SERV_FECHAS_RE.search(t)
+            estado["servicio_fechas"] = m.group(2).strip() if m else ""
 
     segs, recs = detectar(doc)
     for key, seg in segs.items():
+        rows = [_fila(tr) for tr in seg.data]
+        total = _fila(seg.total) if seg.total is not None else None
+        if key == "migr" and seg.ncell == 7:
+            # formato anterior sin EXTENAS: se agrega la columna vacía (índice 6)
+            rows = [r[:6] + [""] + r[6:] for r in rows]
+            total = total[:6] + [""] + total[6:] if total else total
         estado["tablas"][key] = {
-            "rows": [_fila(tr) for tr in seg.data],
-            "total": _fila(seg.total) if seg.total is not None else None,
+            "rows": rows,
+            "total": total,
             "fuente": (_fila(seg.fuente)[0] if seg.fuente is not None else ""),
             "ncell": seg.ncell,
         }

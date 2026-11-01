@@ -5,7 +5,7 @@ actualizar el **Informe Semanal del Comité Policial** de la Región Policial
 Valparaíso. El flujo oficial es:
 
 1. **Importar** el `.docx` oficial (`INFORME REPOL VPO RRF.docx`): la app carga
-   semana, turno, las 15 tablas, los recuadros de la Sección IX y el texto de la X.
+   semana, turno, las 15 tablas, los recuadros de la Sección X, el servicio especial de extranjeros (IX) y el texto de la XI.
 2. **Editar** en la interfaz (tablas tipo hoja de cálculo, recálculo automático
    de totales, diferencias y Δ%).
 3. **Sincronizar** sobre el `.docx` original (automática o manual desde el panel
@@ -48,7 +48,7 @@ comite-policial/
 │   ├── exporters/
 │   │   ├── pptx_export.py    #   botones Exportar PowerPoint y Fotos
 │   │   ├── pptx_informe.py   #   motor que rellena la plantilla .pptx
-│   │   ├── recuadros_export.py  # dibujo de recuadros IX (lo usa docio/escritor)
+│   │   ├── recuadros_export.py  # dibujo de recuadros X (lo usa docio/escritor)
 │   │   └── word.py           #   exportador Word desde cero (legado, sin uso en la UI)
 │   └── ui/                   # app, views, views_extra, recuadros, documento,
 │                             # widgets, calendarios
@@ -81,12 +81,12 @@ informe real sin las fotos de la semana) y solo reescribe textos y celdas, de
 modo que fondos, fuentes y posiciones son los del original. Cubre: portada,
 I Armas, II Droga, III Homicidios (A-D), IV Migraciones, IV-B Flujo,
 V Vehículos, VII Bandas, VIII Detenidos (B y C), una lámina por cada recuadro de
-la Sección IX y el cierre PDI. Las secciones que no figuran en el formato del
-comité (VI, VIII-A y X) no se exportan al PowerPoint.
+la Sección X y el cierre PDI. Las secciones que no figuran en el formato del
+comité (VI, VIII-A, IX y XI) no se exportan al PowerPoint.
 
 - **Fotos:** el botón **Fotos** asigna una imagen a cada marco de las láminas
   fijas (se recorta para llenarlo). Las fotos de cada diligencia se agregan en el
-  recuadro (sección IX). Las fotos solo viven durante la sesión: no se guardan.
+  recuadro (sección X). Las fotos solo viven durante la sesión: no se guardan.
 - **Cambiar el diseño:** si el comité cambia el formato, regenerar la plantilla con
   `python tools/construir_plantilla_pptx.py "<informe nuevo>.pptx"`. El exportador
   busca las tablas por nombre de objeto, conviene mantenerlos.
@@ -148,7 +148,7 @@ Cada una imprime `OK` al final si todo salió bien.
 |---|---|
 | `roundtrip_docx` | Importar un Word, modificarlo y reescribirlo sin perder el formato; sin cambios el XML queda idéntico. |
 | `integracion_docx` | Flujo completo App y Word: importar, editar una celda o un recuadro y comprobar que el guardado automático llega al archivo. |
-| `smoke_recuadros` | Sección IX (crear, duplicar, casilla PPT) y exportación a Word y PowerPoint. |
+| `smoke_recuadros` | Sección X (crear, duplicar, casilla PPT) y exportación a Word y PowerPoint. |
 | `pptx_export_test` | El exportador de PowerPoint sin interfaz: sin restos de la semana de la plantilla, cantidad de láminas, textos y cierre. |
 | `scroll_test` | Regresión del error «se repite la vista»: la rueda del mouse no cambia desplegables ni reconstruye el formulario, y la vista previa no crece sin límite. |
 | `ui_completa_test` | Abre todas las vistas; edita celdas con el teclado; agrega y elimina filas; calendarios; recuadros; fotos; exporta el PowerPoint (con una foto perdida y el archivo bloqueado); importa un Word válido, uno dañado y uno ajeno; comprueba que al cerrar se guarda lo pendiente. |

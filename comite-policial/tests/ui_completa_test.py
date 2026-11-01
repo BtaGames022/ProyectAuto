@@ -10,6 +10,8 @@ import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 os.chdir(ROOT)
+os.environ.setdefault("COMITE_TIPOS_JSON", os.path.join(
+    __import__("tempfile").gettempdir(), "comite_tipos_prueba.json"))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(__file__))
 for _s in (sys.stdout, sys.stderr):
@@ -69,7 +71,7 @@ for clave in list(a._vistas):
     a._switch(clave)
     a.update()
 assert not errores, errores
-assert len(a._vistas) == 16, len(a._vistas)
+assert len(a._vistas) == 17, len(a._vistas)
 
 # ── 2. Edición en la celda con teclado (Enter baja, Tab avanza) ──────────────
 a._switch("armas")
@@ -85,6 +87,7 @@ a.update()
 assert t.raw_values(f0)[1] == "7", t.raw_values(f0)
 total = [t.raw_values(r) for r in t.get_children() if "total" in t.item(r, "tags")][0]
 assert total[1] == "7", total          # el total se recalcula
+import time; time.sleep(0.1); a.update()      # el editor de abajo se abre con after(10)
 assert t._entry_popup is not None      # Enter abrió la celda de abajo
 t._entry_popup.winfo_children()[0].event_generate("<Escape>")
 a.update()

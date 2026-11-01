@@ -9,7 +9,7 @@ TIPOS_ARMAS    = ["Armas de Fuego", "Aire Comprimido", "Armas Hechizas",
                   "Armas Fogueo", "Armas de Fantasía"]
 TIPOS_DROGAS_G = ["Cannabis Sativa (g.)", "Clorhidrato Cocaína (g.)",
                   "Cocaína Base (g.)", "Sintéticas (g.) (*)"]
-TIPOS_DROGAS_P = ["Cannabis Sativa Plantas (unidad)"]
+TIPOS_DROGAS_P = ["Cannabis Sativa Plantas (unidad)", "Éxtasis (unidad)"]
 BH_PREF        = ["BH Valparaíso", "BH Los Andes", "BH San Antonio"]
 MODALIDADES    = ["Arma de Fuego", "Arma Cortante",
                   "Elemento Contundente", "Otras Modalidades"]
@@ -26,7 +26,7 @@ DET_PREFS      = ["PREVMA", "PROLAD", "PROVPO", "PROSAN", "PRECOCEN", "JENACIBЕ
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# IX. CONCURRENCIAS Y DILIGENCIAS RELEVANTES  (recuadros de 2 columnas)
+# X. CONCURRENCIAS Y DILIGENCIAS RELEVANTES  (recuadros de 2 columnas)
 # Cada tipo define los campos de la columna derecha, en orden:
 #   (etiqueta, clase)   clase: "linea" = Etiqueta: valor (campos cortos, sin salto entre sí)
 #                              "parrafo" = Etiqueta: texto corrido

@@ -68,7 +68,7 @@ class ViewsMixin:
 
         _, c2 = card(v, "Plantas (unidades)")
         hint_label(c2, "Doble clic para editar")
-        self.t_drogas_p = tree_with_scroll(c2, cols, wid, height=3,
+        self.t_drogas_p = tree_with_scroll(c2, cols, wid, height=4,
                                            editable=[1, 2],
                                            on_change=self._recalc_drogas_p)
         self._fill_drogas_p()
@@ -255,26 +255,28 @@ class ViewsMixin:
         _, c = card(v, "Fiscalizaciones por Unidad")
         hint_label(c, "Doble clic para editar · La última columna admite texto libre (nacionalidades)")
         cols   = ["UNIDAD", "FISC.", "FISCALIZADOS", "DENUNCIADOS",
-                  "NOTIF. EXPULSIÓN", "DETENIDOS", "NACION. DENUNCIADOS"]
-        widths = [120, 80, 120, 120, 150, 100, 300]
+                  "NOTIF. EXPULSIÓN", "DETENIDOS", "EXTENAS", "NACION. DENUNCIADOS"]
+        widths = [120, 70, 110, 110, 140, 90, 80, 300]
         self.t_migr = tree_with_scroll(c, cols, widths, height=9,
-                                       editable=[1, 2, 3, 4, 5, 6],
+                                       editable=[1, 2, 3, 4, 5, 6, 7],
                                        on_change=self._recalc_migr)
         for u in MIGR_UNITS:
-            self.t_migr.add_row([u, "0", "0", "0", "0", "0", ""])
-        self.t_migr.add_total(["TOTAL", "0", "0", "0", "0", "0", ""])
+            self.t_migr.add_row([u, "0", "0", "0", "0", "0", "0", ""])
+        self.t_migr.add_total(["TOTAL", "0", "0", "0", "0", "0", "0", ""])
 
 
     def _recalc_migr(self):
         data = [r for r in self.t_migr.get_children()
                 if "total" not in self.t_migr.item(r,"tags")]
         tots = [sum(safe_int(self.t_migr.item(r,"values")[i]) for r in data)
-                for i in range(1, 6)]
+                for i in range(1, 7)]
         for r in self.t_migr.get_children():
             if "total" in self.t_migr.item(r,"tags"):
+                # la última celda del total (nacionalidades) no se calcula: se respeta
+                ult = self.t_migr.item(r, "values")[7]
                 self.t_migr.item(r, values=(
                     "TOTAL", fmt(tots[0]), fmt(tots[1]), fmt(tots[2]),
-                    fmt(tots[3]), fmt(tots[4]), ""))
+                    fmt(tots[3]), fmt(tots[4]), fmt(tots[5]), ult))
 
     # =========================================================================
     # V. VEHÍCULOS

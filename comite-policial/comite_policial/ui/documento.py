@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from comite_policial.config.settings import settings
 from comite_policial.config.theme import *
+from comite_policial.core import tipos_personalizados
 from comite_policial.docio.importador import importar
 from comite_policial.docio.escritor import escribir
 from comite_policial.ui.widgets import Boton
@@ -14,21 +15,23 @@ from comite_policial.ui.widgets import Boton
 TREES = {
     "armas": "t_armas", "drogas_g": "t_drogas_g", "drogas_p": "t_drogas_p",
     "homi_a": "t_homi_a", "homi_b": "t_homi_b", "homi_c": "t_homi_c",
+    "homi_d": "t_homi_d",
     "migr": "t_migr", "flujo": "t_flujo",
     "veh_e": "t_veh_e", "veh_t": "t_veh_t", "brisex": "t_brisex",
     "bandas": "t_bandas", "det_a": "t_det_a", "det_b": "t_det_b",
-    "det_c": "t_det_c",
+    "det_c": "t_det_c", "servicio_ext": "t_servicio",
 }
 
 
 NOMBRES_TABLAS = {
     "armas": "I. Armas", "drogas_g": "II. Droga en gramos", "drogas_p": "II. Droga en plantas",
     "homi_a": "III-A. Homicidios por brigada", "homi_b": "III-B. Modalidad",
-    "homi_c": "III-C. Resultado", "migr": "IV. Migraciones", "flujo": "IV-B. Flujo migratorio",
+    "homi_c": "III-C. Resultado", "homi_d": "III-D. Comparativo interanual", "migr": "IV. Migraciones", "flujo": "IV-B. Flujo migratorio",
     "veh_e": "V. Vehículos por estado", "veh_t": "V. Vehículos por tipo",
     "brisex": "VI. Delitos sexuales", "bandas": "VII. Bandas",
     "det_a": "VIII-A. Detenidos por delito", "det_b": "VIII-B. Detenidos por prefectura",
     "det_c": "VIII-C. Acumulado del año",
+    "servicio_ext": "IX. Servicio especial de fiscalización de extranjeros",
 }
 
 
@@ -111,16 +114,22 @@ class DocumentoMixin:
 
         self._doc = {"path": ruta, "bytes": base, "import": estado}
         self._doc_aplicar(estado)
+        # formatos de concurrencia que la app aún no tenía: quedan como opciones
+        nuevos_tipos = tipos_personalizados.registrar(estado["recuadros"])
+        if nuevos_tipos:
+            self._rec_tipos_refrescar()
         self.v_docname.set(f"Documento: {os.path.basename(ruta)}")
         self._switch("armas")
         n_t = len(estado["tablas"]); n_r = len(estado["recuadros"])
         self.v_status.set(f"Documento importado: {n_t} tablas, {n_r} recuadros")
-        faltan = [n for k, n in NOMBRES_TABLAS.items()
-                  if k not in estado["tablas"] and k != "homi_d"]
+        faltan = [n for k, n in NOMBRES_TABLAS.items() if k not in estado["tablas"]]
         msg = (f"Se cargaron {n_t} tablas y {n_r} recuadros de concurrencias.\n\n"
                f"Los cambios que hagas en la aplicación se escribirán en:\n{ruta}\n\n")
         if respaldo:
             msg += f"Respaldo del original:\n{respaldo}\n\n"
+        if nuevos_tipos:
+            msg += ("Se agregaron como opciones nuevas de concurrencia:\n• "
+                    + "\n• ".join(nuevos_tipos) + "\n\n")
         if faltan:
             msg += ("No se encontraron en el documento (quedan con sus valores "
                     "actuales y no se escriben en el Word):\n• " + "\n• ".join(faltan))
@@ -148,6 +157,9 @@ class DocumentoMixin:
                     tree.add_total(pad(datos["total"]))
                 if datos.get("fuente"):
                     tree.add_fuente(datos["fuente"], n)
+            if "homi_d" in estado["tablas"]:
+                self._recalc_homi_d()      # la variación por fila no viene en el Word
+            self.v_serv_fechas.set(estado.get("servicio_fechas", ""))
             self.recuadros = estado["recuadros"]
             self._rec_refrescar_lista()
             self._rec_nuevo()
@@ -180,6 +192,7 @@ class DocumentoMixin:
             "tablas": tablas,
             "recuadros": self.recuadros,
             "texto_x": self.txt_x.get("1.0", "end-1c"),
+            "servicio_fechas": self.v_serv_fechas.get().strip(),
         }
 
     # ── Sincronización ───────────────────────────────────────────────────────

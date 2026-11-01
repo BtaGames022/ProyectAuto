@@ -1,4 +1,4 @@
-"""Renderizado de los recuadros de la sección IX en Word y PowerPoint."""
+"""Renderizado de los recuadros de la sección X en Word y PowerPoint."""
 from docx.shared import Pt, RGBColor, Inches as DInches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
@@ -13,7 +13,7 @@ from lxml import etree
 from comite_policial.core.recuadros import (
     lineas_planas_izquierda, parrafos_derecha)
 
-TITULO_SECCION = "IX. CONCURRENCIAS Y DILIGENCIAS RELEVANTES"
+TITULO_SECCION = "X. CONCURRENCIAS Y DILIGENCIAS RELEVANTES"
 FUENTE = "Arial"
 
 

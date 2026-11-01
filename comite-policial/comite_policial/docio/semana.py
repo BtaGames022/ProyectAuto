@@ -2,9 +2,12 @@
 import re
 
 # 31.AGO AL 06.SEP.026  |  31.AGO al 06.SEP.026  |  31 AGO AL 06.SEP.026  |  31.AGO.026 AL 06.SEP.026
+# El mes de la primera fecha puede omitirse cuando es el mismo:  19 AL 25.OCT.026
 SEMANA_RE = re.compile(
-    r"(?<!\d)(?!01\.ENE)(\d{1,2})([. ])([A-ZÁÉÍÓÚ]{3})(?:\.(\d{3}))?(\s+)(AL|al)(\s+)"
+    r"(?<!\d)(?!01\.ENE)(\d{1,2})(?:([. ])([A-ZÁÉÍÓÚ]{3})(?:\.(\d{3}))?)?(\s+)(AL|al)(\s+)"
     r"(\d{1,2})\.([A-ZÁÉÍÓÚ]{3})\.(\d{3})")
+# Título del servicio especial de extranjeros:  ... EXTRANJEROS 19 Y 20.OCT.026
+SERV_FECHAS_RE = re.compile(r"(EXTRANJEROS\s+)(\S.*?\.[A-ZÁÉÍÓÚ]{3}\.\d{3})")
 ACUM_RE = re.compile(r"(01\.ENE\s+(?:AL|al)\s+)(\d{1,2}\.[A-ZÁÉÍÓÚ]{3}\.\d{3})")
 # Formato estándar de la app: "DD.MES AL DD.MES.YYY"
 SEMANA_APP_RE = re.compile(r"(\d{1,2})\.([A-ZÁÉÍÓÚ]{3})\s+AL\s+(\d{1,2})\.([A-ZÁÉÍÓÚ]{3})\.(\d{3})",
@@ -17,7 +20,7 @@ def semana_normalizada(texto: str) -> str:
     if not m:
         return ""
     d1, _, m1, _, _, _, _, d2, m2, y = m.groups()
-    return f"{int(d1):02d}.{m1} AL {int(d2):02d}.{m2}.{y}"
+    return f"{int(d1):02d}.{m1 or m2} AL {int(d2):02d}.{m2}.{y}"
 
 
 def _partes(semana_app: str):
@@ -36,9 +39,11 @@ def funcion_semana(semana_app: str):
     d1, m1, d2, m2, y = p
 
     def fn(m):
-        _, sep, _, ycon, ws1, al, ws2, _, _, _ = m.groups()
+        _, sep, mes1, ycon, ws1, al, ws2, _, _, _ = m.groups()
         anio1 = f".{y}" if ycon else ""
-        return f"{d1:02d}{sep}{m1}{anio1}{ws1}{al}{ws2}{d2:02d}.{m2}.{y}"
+        if mes1 is None and m1 == m2:           # forma corta: «19 AL 25.OCT.026»
+            return f"{d1:02d}{ws1}{al}{ws2}{d2:02d}.{m2}.{y}"
+        return f"{d1:02d}{sep or '.'}{m1}{anio1}{ws1}{al}{ws2}{d2:02d}.{m2}.{y}"
     return fn
 
 

@@ -1,5 +1,5 @@
 """
-Modelo de los recuadros de la sección IX (Concurrencias y Diligencias Relevantes).
+Modelo de los recuadros de la sección X (Concurrencias y Diligencias Relevantes).
 
 Un recuadro es una tabla de 1 fila x 2 columnas:
   • Izquierda: unidad, grupo, N.º de detenidos y título del procedimiento (centrado, negrita).

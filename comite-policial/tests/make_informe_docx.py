@@ -2,7 +2,7 @@
 
 Sirve para probar la importación y la sincronización sin versionar el informe
 verdadero. Cada tabla lleva los encabezados que busca `docio/mapa.py`, filas de
-datos, TOTAL y FUENTE (celda combinada), y los recuadros de la sección IX son
+datos, TOTAL y FUENTE (celda combinada), y los recuadros de la sección X son
 tablas de 1 fila x 2 columnas con las etiquetas en negrita.
 
     python tests/make_informe_docx.py [ruta]
@@ -167,6 +167,12 @@ def crear(destino: str, semana=SEMANA):
            ["Otras Modalidades", "0", "0", "0", "4"]],
           ["TOTAL GENERAL", "0", "0", "2", "54"], "FUENTE: Elaboración propia")
 
+    # III-D: comparativo interanual (tabla real; la variación va solo en el total)
+    tabla(doc, [["HOMICIDIOS", "ENE – AGO 2025", "ENE – AGO 2026", "VAR. % 2025 / 2026"]],
+          [["Homicidios", "55", "47", ""], ["Femicidios", "2", "3", ""],
+           ["Parricidios", "2", "2", ""], ["Infanticidios", "0", "0", ""]],
+          ["TOTAL, GENERAL", "59", "52", "-11,9%"])
+
     doc.add_heading("IV.- MIGRACIONES", 1)
     tabla(doc, [["UNIDAD", "FISCALIZACIONES", "FISCALIZADOS", "DENUNCIADOS",
                  "NOTIFICACIÓN DE EXPULSIÓN", "DETENIDOS", "NACIONALIDAD DENUNCIADOS"]],
@@ -223,7 +229,7 @@ def crear(destino: str, semana=SEMANA):
            ["PRECOCEN", "0", "283", "283"], ["JENACIBER", "3", "24", "27"]],
           ["TOTAL", "700", "1.930", "2.630"], "FUENTE: Brain")
 
-    doc.add_heading("IX.- CONCURRENCIAS Y DILIGENCIAS RELEVANTES", 1)
+    doc.add_heading("X.- CONCURRENCIAS Y DILIGENCIAS RELEVANTES", 1)
     casos = [
         ("Brigada de Robos Valparaíso", "", "9", "Robo en lugar no habitado\nLavado de activos",
          [("Fecha", "01.SEP.026.", False), ("Lugar", "Región Metropolitana y Los Lagos.", False),
@@ -261,7 +267,7 @@ def crear(destino: str, semana=SEMANA):
     for unidad, grupo, det, titulo, campos in casos:
         recuadro(doc, unidad, grupo, det, titulo, campos)
 
-    doc.add_heading("X. DILIGENCIAS DE RELEVANCIA DE LA SEMANA", 1)
+    doc.add_heading("XI. DILIGENCIAS DE RELEVANCIA DE LA SEMANA", 1)
     doc.add_paragraph("Operativo coordinado con Fiscalía en la región.")
     doc.add_paragraph("Se incautaron especies por un valor aproximado de 281 millones.")
 

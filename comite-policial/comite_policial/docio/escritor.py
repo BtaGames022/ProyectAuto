@@ -12,7 +12,7 @@ from comite_policial.core.recuadros import (
 from comite_policial.docio.importador import abrir
 from comite_policial.docio.mapa import detectar, bloque_texto_x
 from comite_policial.docio.semana import (
-    SEMANA_RE, ACUM_RE, funcion_semana, funcion_acum)
+    SEMANA_RE, ACUM_RE, SERV_FECHAS_RE, funcion_semana, funcion_acum)
 from comite_policial.docio.xml import (
     W_P, W_TR, cell_text, phys_cells, par_text, set_cell_text,
     reescribir_celda, reemplazar_regex_par, set_par_text, set_bloque_parrafos, norm)
@@ -43,9 +43,25 @@ def _aplicar_tablas(segs, tablas: dict):
         seg = segs.get(key)
         if seg is None:
             continue
-        _sincronizar_filas(seg, [list(r) for r in datos["rows"]])
+        filas = [list(r) for r in datos["rows"]]
+        if key == "migr" and seg.ncell == 7:
+            # el documento es del formato anterior (sin EXTENAS): se omite esa columna
+            filas = [r[:6] + r[7:] for r in filas]
+        if key == "homi_d":
+            # En el Word la variación solo figura en la fila TOTAL; si las filas
+            # de datos venían en blanco, se respetan (la app las calcula aparte).
+            en_blanco = all(not cell_text(phys_cells(tr)[-1]).strip() for tr in seg.data)
+            if en_blanco:
+                filas = [r[:-1] + [""] for r in filas]
+        _sincronizar_filas(seg, filas)
         if seg.total is not None and datos.get("total"):
-            _escribir_fila(seg.total, datos["total"])
+            total = list(datos["total"])
+            if key == "migr" and seg.ncell == 7:
+                total = total[:6] + total[7:]
+            if key == "homi_d" and str(total[-1]).endswith("%"):
+                total[-1] = str(total[-1]).replace(".", ",")   # el Word usa coma: -11,9%
+            _escribir_fila(seg.total, total)
+
 
 
 # ── Semana / turno ────────────────────────────────────────────────────────────
@@ -81,49 +97,82 @@ def _aplicar_semana_turno(doc, recuadro_tbls, semana, semana_imp, turno, turno_i
 
 
 # ── Recuadros ─────────────────────────────────────────────────────────────────
-def _reescribir_izq(tbl, rec):
-    izq = phys_cells(tbl.findall(W_TR)[0])[0]
+# Cada recuadro es una fila (w:tr) de 2 celdas. Una tabla puede traer varios.
+def _reescribir_izq(tr, rec):
+    izq = phys_cells(tr)[0]
     parrafos = [[(ln, True)] if ln else [] for ln in lineas_planas_izquierda(rec)]
     reescribir_celda(izq, parrafos, centrado_bold=True)
 
 
-def _reescribir_der(tbl, rec):
-    der = phys_cells(tbl.findall(W_TR)[0])[1]
+def _reescribir_der(tr, rec):
+    der = phys_cells(tr)[1]
     reescribir_celda(der, parrafos_derecha(rec))
 
 
-def _aplicar_cambios(tbl, rec, forzar=False):
+def _aplicar_cambios(tr, rec, forzar=False):
     snap = rec.get("_snap")
     actual = contenido(rec)
     if forzar or not snap or snap.get("izq") != actual["izq"]:
-        _reescribir_izq(tbl, rec)
+        _reescribir_izq(tr, rec)
     if forzar or not snap or snap.get("der") != actual["der"]:
-        _reescribir_der(tbl, rec)
+        _reescribir_der(tr, rec)
 
 
-def _aplicar_recuadros(doc, rec_tbls, recuadros):
+def _tabla_nueva(tr):
+    """Copia de la tabla de `tr` que conserva solo esa fila (un recuadro por tabla)."""
+    tbl = tr.getparent()
+    pos = tbl.findall(W_TR).index(tr)
+    nueva = copy.deepcopy(tbl)
+    for k, fila in enumerate(nueva.findall(W_TR)):
+        if k != pos:
+            nueva.remove(fila)
+    return nueva
+
+
+def _tabla_de(tr):
+    """La propia tabla si tiene una sola fila; si no, una copia de una fila."""
+    tbl = tr.getparent()
+    return tbl if len(tbl.findall(W_TR)) == 1 else _tabla_nueva(tr)
+
+
+def _tablas_distintas(filas):
+    out = []
+    for tr in filas:
+        if tr.getparent() not in out:
+            out.append(tr.getparent())
+    return out
+
+
+def _aplicar_recuadros(doc, rec_rows, recuadros):
     from comite_policial.exporters.recuadros_export import (
         crear_recuadro_word, TITULO_SECCION)
+
+    # Misma lista, mismo orden (solo ediciones): se modifica cada fila en el lugar
+    if rec_rows and [r.get("_orig") for r in recuadros] == list(range(len(rec_rows))):
+        for tr, rec in zip(rec_rows, recuadros):
+            _aplicar_cambios(tr, rec)
+        return
+
     usados, elems = set(), []
     for rec in recuadros:
         o = rec.get("_orig")
-        if o is not None and 0 <= o < len(rec_tbls) and o not in usados:
+        if o is not None and 0 <= o < len(rec_rows) and o not in usados:
             usados.add(o)
-            el = rec_tbls[o]
-            _aplicar_cambios(el, rec)
+            _aplicar_cambios(rec_rows[o], rec)
+            el = _tabla_de(rec_rows[o])
         else:
             c = rec.get("_clone_of")
-            base = (rec_tbls[c] if c is not None and 0 <= c < len(rec_tbls)
-                    else (rec_tbls[0] if rec_tbls else None))
+            base = (rec_rows[c] if c is not None and 0 <= c < len(rec_rows)
+                    else (rec_rows[0] if rec_rows else None))
             if base is not None:
-                el = copy.deepcopy(base)
-                _aplicar_cambios(el, rec, forzar=True)
+                el = _tabla_nueva(base)
+                _aplicar_cambios(el.findall(W_TR)[0], rec, forzar=True)
             else:
                 el = None
-                pass
         elems.append(el)
 
     body = doc.element.body
+    rec_tbls = _tablas_distintas(rec_rows)
     if rec_tbls:
         gap_tpl = None
         sib = rec_tbls[0].getnext()
@@ -162,12 +211,20 @@ def escribir(base_bytes: bytes, estado: dict, estado_import: dict, destino: str)
     """Aplica `estado` (datos actuales de la app) sobre el documento base y lo
     guarda en `destino` (reemplazo atómico)."""
     doc = abrir(base_bytes)
-    segs, rec_tbls = detectar(doc)
+    segs, rec_rows = detectar(doc)
 
     _aplicar_tablas(segs, estado.get("tablas", {}))
-    _aplicar_semana_turno(doc, rec_tbls,
+    _aplicar_semana_turno(doc, _tablas_distintas(rec_rows),
                           estado.get("semana", ""), estado_import.get("semana", ""),
                           estado.get("turno", ""), estado_import.get("turno", ""))
+
+    fechas = estado.get("servicio_fechas")
+    if fechas is not None and fechas.strip() != estado_import.get("servicio_fechas", "").strip():
+        for p in doc.element.body.iter(W_P):
+            if "SERVICIO ESPECIAL DE FISCALIZACION" in norm(par_text(p)):
+                reemplazar_regex_par(p, SERV_FECHAS_RE,
+                                     lambda m: m.group(1) + fechas.strip())
+                break
 
     texto_x = estado.get("texto_x")
     if texto_x is not None and texto_x.strip() != estado_import.get("texto_x", "").strip():
@@ -175,7 +232,7 @@ def escribir(base_bytes: bytes, estado: dict, estado_import: dict, destino: str)
         if pars:
             set_bloque_parrafos(pars, [l for l in texto_x.split("\n")])
 
-    _aplicar_recuadros(doc, rec_tbls, estado.get("recuadros", []))
+    _aplicar_recuadros(doc, rec_rows, estado.get("recuadros", []))
 
     carpeta = os.path.dirname(os.path.abspath(destino))
     fd, tmp = tempfile.mkstemp(suffix=".docx", dir=carpeta)
