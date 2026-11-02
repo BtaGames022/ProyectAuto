@@ -70,5 +70,18 @@ w["Diligencias"][0].insert("1.0", "texto largo " * 4000)
 a._rec_preview()
 a.update()
 assert int(a._pv_der.cget("height")) <= 24, a._pv_der.cget("height")
+# lista desplegable abierta (popdown de Tcl: event.widget llega como str)
+from comite_policial.ui.scroll import _enrutar
+for cb in cbs:
+    a.tk.call("ttk::combobox::PopdownWindow", str(cb))
+    lb = f"{cb}.popdown.f.l"
+    class _EvPop:
+        widget = lb
+        delta = -120
+        num = 0
+        x_root = 0
+        y_root = 0
+    assert _enrutar(_EvPop()) == "break"
+
 a.destroy()
 print("OK")

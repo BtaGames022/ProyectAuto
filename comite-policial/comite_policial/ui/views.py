@@ -67,11 +67,15 @@ class ViewsMixin:
         self._fill_drogas_g()
 
         _, c2 = card(v, "Plantas (unidades)")
-        hint_label(c2, "Doble clic para editar")
-        self.t_drogas_p = tree_with_scroll(c2, cols, wid, height=4,
-                                           editable=[1, 2],
+        hint_label(c2, "Doble clic para editar nombre o cantidades · Los totales se recalculan automáticamente")
+        self.t_drogas_p = tree_with_scroll(c2, cols, wid, height=6,
+                                           editable=[0, 1, 2],
                                            on_change=self._recalc_drogas_p)
         self._fill_drogas_p()
+        bar_p = tk.Frame(c2, bg=CARD_BG)
+        bar_p.pack(anchor="w", pady=(8, 0))
+        Boton(bar_p, "Agregar fila", self._add_drogas_p, "success").pack(side="left", padx=(0, 8))
+        Boton(bar_p, "Eliminar seleccionada", self._del_drogas_p, "danger").pack(side="left")
 
         _, c3 = card(v, "Nota de droga sintética (*)")
         hint_label(c3, "Sale bajo la tabla de gramos en la lámina de droga del PowerPoint · "
@@ -104,6 +108,33 @@ class ViewsMixin:
         for r in self.t_drogas_g.get_children():
             if "total" in self.t_drogas_g.item(r,"tags"):
                 self.t_drogas_g.item(r, values=("TOTAL", fmt(ts), fmt(ty)))
+
+    def _add_drogas_p(self):
+        t = self.t_drogas_p
+        hijos = list(t.get_children())
+        total = next((r for r in hijos if "total" in t.item(r, "tags")), None)
+        idx = hijos.index(total) if total else "end"
+        nueva = t.insert("", idx, values=("Nueva sustancia (unidad)", "0", "0"))
+        self._recalc_drogas_p()
+        self._doc_cambio()
+        t.selection_set(nueva)
+        t.focus(nueva)
+        t.see(nueva)
+
+    def _del_drogas_p(self):
+        t = self.t_drogas_p
+        datos = [r for r in t.get_children()
+                 if not {"total", "fuente"} & set(t.item(r, "tags"))]
+        for r in t.selection():
+            if r not in datos:
+                continue
+            if len(datos) <= 1:
+                t.item(r, values=("", "0", "0"))
+            else:
+                t.delete(r)
+                datos.remove(r)
+        self._recalc_drogas_p()
+        self._doc_cambio()
 
     def _recalc_drogas_p(self):
         rows = [r for r in self.t_drogas_p.get_children()
@@ -138,8 +169,8 @@ class ViewsMixin:
 
     def _recalc_homi_a(self):
         data = [r for r in self.t_homi_a.get_children()
-                if not self.t_homi_a.item(r,"tags")
-                or ("alt" in self.t_homi_a.item(r,"tags"))]
+                if "total" not in self.t_homi_a.item(r,"tags")
+                and "fuente" not in self.t_homi_a.item(r,"tags")]
         ts = sum(safe_int(self.t_homi_a.item(r,"values")[1]) for r in data)
         ty = sum(safe_int(self.t_homi_a.item(r,"values")[2]) for r in data)
         for r in self.t_homi_a.get_children():
@@ -235,6 +266,15 @@ class ViewsMixin:
         for cat in HOMI_COMP_CATS:
             self.t_homi_d.add_row([cat, "0", "0", "0%"])
         self.t_homi_d.add_total(["TOTAL, GENERAL", "0", "0", "0%"])
+        self.v_semana.trace_add("write", lambda *a: self._actualizar_periodo_homi_d())
+        self._actualizar_periodo_homi_d()
+
+    def _actualizar_periodo_homi_d(self):
+        from comite_policial.docio.semana import periodo_cerrado
+        per = periodo_cerrado(self.v_semana.get()) or PERIODO
+        cols = self.t_homi_d["columns"]
+        self.t_homi_d.heading(cols[1], text=f"{per} {ANO_ANT}")
+        self.t_homi_d.heading(cols[2], text=f"{per} {ANO_ACT}")
 
 
     def _recalc_homi_d(self):
@@ -261,12 +301,13 @@ class ViewsMixin:
         section_title(v, "IV", "Migraciones y Policía Internacional")
 
         _, c = card(v, "Fiscalizaciones por Unidad")
-        hint_label(c, "Doble clic para editar · La última columna admite texto libre (nacionalidades)")
+        hint_label(c, "Doble clic para editar · EXTENAS y NACION. DENUNCIADOS admiten varias líneas (Enter agrega línea, Tab o clic fuera guarda)")
         cols   = ["UNIDAD", "FISC.", "FISCALIZADOS", "DENUNCIADOS",
                   "NOTIF. EXPULSIÓN", "DETENIDOS", "EXTENAS", "NACION. DENUNCIADOS"]
-        widths = [120, 70, 110, 110, 140, 90, 80, 300]
+        widths = [110, 70, 115, 115, 140, 95, 150, 265]
         self.t_migr = tree_with_scroll(c, cols, widths, height=9,
                                        editable=[1, 2, 3, 4, 5, 6, 7],
+                                       multiline=[6, 7],
                                        on_change=self._recalc_migr)
         for u in MIGR_UNITS:
             self.t_migr.add_row([u, "0", "0", "0", "0", "0", "0", ""])
@@ -274,9 +315,15 @@ class ViewsMixin:
 
 
     def _recalc_migr(self):
+        import re as _re
+        def _sum_col(r, i):
+            val = str(self.t_migr.item(r, "values")[i])
+            if i == 6 and not val.strip().replace(".", "").isdigit():
+                return sum(int(m) for m in _re.findall(r"\d+", val))
+            return safe_int(val)
         data = [r for r in self.t_migr.get_children()
                 if "total" not in self.t_migr.item(r,"tags")]
-        tots = [sum(safe_int(self.t_migr.item(r,"values")[i]) for r in data)
+        tots = [sum(_sum_col(r, i) for r in data)
                 for i in range(1, 7)]
         for r in self.t_migr.get_children():
             if "total" in self.t_migr.item(r,"tags"):
@@ -355,7 +402,7 @@ class ViewsMixin:
         cols   = ["PREFECTURA", "CANTIDAD", "INTEGRANTES", "DELITO"]
         widths = [160, 100, 120, 420]
         self.t_bandas = tree_with_scroll(c, cols, widths, height=7,
-                                         editable=[1, 2, 3])
+                                         editable=[1, 2, 3], multiline=[3])
         for p in BANDAS_PREFS:
             self.t_bandas.add_row([p, "0", "0", ""])
 
@@ -401,7 +448,7 @@ class ViewsMixin:
         cols   = ["DELITO", "ARRESTADO", "DETENIDO", "SEMANA"]
         widths = [420, 110, 110, 110]
         self.t_det_a = tree_with_scroll(c, cols, widths, height=12,
-                                        editable=[1, 2],
+                                        editable=[0, 1, 2],
                                         on_change=self._recalc_det_a)
         self.t_det_a.add_total(["TOTAL", "0", "0", "0"])
         self.t_det_a.add_fuente("FUENTE: Brain", 4)

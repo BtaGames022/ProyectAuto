@@ -57,7 +57,7 @@ TABLAS = {
     "det_c":        (1, True, True, False),
 }
 # Tablas que deben encajar entre su posición y lo que hay debajo (fotos, otra tabla)
-AJUSTAR_ABAJO = {"flujo", "migr", "servicio_ext", "bandas", "det_b", "det_c"}
+AJUSTAR_ABAJO = {"drogas_p", "flujo", "migr", "servicio_ext", "bandas", "det_b", "det_c"}
 
 # Alturas mínimas (EMU) a las que se puede comprimir cada tipo de fila
 PISOS = {"cab": 400000, "dato": 200000, "total": 200000, "fuente": 180000}
@@ -212,7 +212,7 @@ class _Contexto:
             "veh_e":    {(0, 1): sem, (0, 2): fecha},
             "veh_t":    {(0, 1): sem, (0, 2): fecha},
             "det_b":    {(0, 3): sem},
-            "det_c":    {(0, 3): f"AÑO {self.ano_act} A LA FECHA"},
+            "det_c":    {(0, 0): "PREFECTURA", (0, 3): f"AÑO {self.ano_act} A LA FECHA"},
         }
 
     def reescribir(self, texto: str, anterior: str):
@@ -576,11 +576,12 @@ def _parrafos_diligencia(rec) -> list:
         if out:
             out.append([])
         lineas = [ln.rstrip() for ln in valor.splitlines() if ln.strip()]
+        rot = re.sub(r"\s+\(\d+\)$", "", etiqueta)
         if clase == "lista":
-            out.append([(f"{etiqueta}:", True)])
+            out.append([(f"{rot}:", True)])
             out.extend([(ln, False)] for ln in lineas)
         else:
-            out.append([(f"{etiqueta}: ", True), (lineas[0], False)])
+            out.append([(f"{rot}: ", True), (lineas[0], False)])
             out.extend([(ln, False)] for ln in lineas[1:])
     return out
 
@@ -723,6 +724,9 @@ def exportar_informe(estado: dict, ruta_salida: str, plantilla: str,
             "La plantilla es de un formato anterior (no trae las tablas y marcos "
             "nombrados). Regenerarla con tools/construir_plantilla_pptx.py.")
     cierre = prs.slides[-1]
+    if not estado.get("servicio_en_pptx", True) and "servicio_ext" in indice:
+        sl_serv, _ = indice.pop("servicio_ext")
+        _quitar_lamina(prs, sl_serv)
     limites = {k: _limite_inferior(sl, forma) for k, (sl, forma) in indice.items()}
 
     fijas = [sl for sl in prs.slides if sl is not proto and sl is not cierre]

@@ -160,6 +160,9 @@ class DocumentoMixin:
             if "homi_d" in estado["tablas"]:
                 self._recalc_homi_d()      # la variación por fila no viene en el Word
             self.v_serv_fechas.set(estado.get("servicio_fechas", ""))
+            if estado.get("nota_sintetica"):
+                self.txt_nota_sint.delete("1.0", "end")
+                self.txt_nota_sint.insert("1.0", estado["nota_sintetica"])
             self.recuadros = estado["recuadros"]
             self._rec_refrescar_lista()
             self._rec_nuevo()

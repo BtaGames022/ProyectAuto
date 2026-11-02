@@ -11,12 +11,13 @@ from comite_policial.core.recuadros import (
     grupos_izquierda, parrafos_derecha, resumen)
 from comite_policial.ui.widgets import *
 from comite_policial.ui.calendarios import CalendarPopup
+from comite_policial.ui.detalle import DetalleMixin
 
 
 CASILLA_SI, CASILLA_NO = "Sí", "No"
 
 
-class RecuadrosMixin:
+class RecuadrosMixin(DetalleMixin):
     """Lista, editor y vista previa de los recuadros de la sección X."""
 
     # =========================================================================
@@ -27,6 +28,7 @@ class RecuadrosMixin:
         self._rec_idx = None            # índice en edición (None = nuevo)
         self._rec_widgets = {}          # etiqueta -> (widget, clase)
         self._rec_defs_imp = []         # campos del último recuadro importado
+        self._rec_tipo_ok = TIPO_DEFECTO   # último tipo válido (el combo admite texto libre)
         self._rec_fotos: list[str] = []  # fotos del recuadro (solo para el PowerPoint)
         self._rec_after = None
 
@@ -40,7 +42,7 @@ class RecuadrosMixin:
         hint_label(c, "Salen en este orden. «PPT» indica si el recuadro se exporta al "
                       "PowerPoint (clic en la columna para cambiarlo). Doble clic para editar.")
         cols = ["PPT", "N°", "UNIDAD", "TIPO", "FECHA", "LUGAR", "DETENIDOS"]
-        widths = [50, 44, 300, 230, 90, 170, 100]
+        widths = [46, 40, 310, 200, 85, 215, 108]
         self.t_rec = tree_with_scroll(c, cols, widths, height=8, min_rows=4,
                                       editable=[99])
         self.t_rec.bind("<Button-1>", self._rec_click_casilla, add="+")
@@ -90,12 +92,14 @@ class RecuadrosMixin:
         tk.Label(izq, text="Encabezado", bg=SURFACE, fg=INK, anchor="w",
                  font=(FONT, SIZE_BASE, "bold")).pack(fill="x", pady=(0, 8))
 
-        self._rec_lbl(izq, "Tipo de procedimiento")
-        cb = ttk.Combobox(izq, textvariable=self.rv_tipo, state="readonly",
+        self._rec_lbl(izq, "Tipo de procedimiento (elige uno o escribe uno nuevo)")
+        cb = ttk.Combobox(izq, textvariable=self.rv_tipo, state="normal",
                           values=list(TIPOS_RECUADRO) + [TIPO_IMPORTADO], width=40,
                           font=(FONT, SIZE_BASE))
         cb.pack(anchor="w", pady=(2, 10))
         cb.bind("<<ComboboxSelected>>", lambda e: self._rec_cambiar_tipo())
+        cb.bind("<Return>", lambda e: self._rec_tipo_escrito())
+        cb.bind("<FocusOut>", lambda e: self._rec_tipo_escrito())
         self._rec_cb = cb
 
         self._rec_lbl(izq, "Unidad / Brigada")
@@ -176,37 +180,6 @@ class RecuadrosMixin:
     def _rec_lbl(parent, texto):
         etiqueta(parent, texto).pack(anchor="w")
 
-    def _rec_construir_campos(self, valores: dict, fecha_def=""):
-        for w in self._rec_campos_frame.winfo_children():
-            w.destroy()
-        self._rec_widgets = {}
-        cf = self._rec_campos_frame
-        cf.grid_columnconfigure(1, weight=1)
-        for i, (nombre, clase) in enumerate(self._rec_defs_actuales()):
-            tk.Label(cf, text=nombre, bg=SURFACE, fg=INK, font=(FONT, SIZE_SMALL, "bold"),
-                     anchor="ne", justify="right", width=20, wraplength=150
-                     ).grid(row=i, column=0, sticky="ne", padx=(0, 10), pady=(7, 0))
-            val = valores.get(nombre, fecha_def if nombre == "Fecha" else "")
-            if clase == "linea":
-                ent = tk.Entry(cf)
-                ent.insert(0, val)
-                ent.grid(row=i, column=1, sticky="ew", pady=3, ipady=4)
-                ent.bind("<KeyRelease>", lambda e: self._rec_preview_later())
-                if nombre == "Fecha":
-                    Boton(cf, "Calendario", lambda en=ent: self._rec_elegir_fecha(en),
-                          "secondary", chico=True).grid(row=i, column=2, padx=(8, 0))
-                self._rec_widgets[nombre] = (ent, clase)
-            else:
-                txt = tk.Text(cf, height=3, wrap="word", padx=6, pady=4)
-                txt.insert("1.0", val)
-                txt.grid(row=i, column=1, sticky="ew", pady=3)
-                txt.bind("<KeyRelease>", lambda e: self._rec_preview_later())
-                self._rec_widgets[nombre] = (txt, clase)
-                if clase == "lista":
-                    tk.Label(cf, text="un ítem\npor línea", bg=SURFACE, fg=INK_SOFT,
-                             font=(FONT, 8), justify="left"
-                             ).grid(row=i, column=2, padx=(8, 0), sticky="w")
-
     def _rec_fotos_refrescar(self):
         n = len(self._rec_fotos)
         self._rec_fotos_txt.set("Sin fotos" if not n else
@@ -228,17 +201,35 @@ class RecuadrosMixin:
         """Actualiza el desplegable con los tipos incorporados desde el documento."""
         self._rec_cb.configure(values=list(TIPOS_RECUADRO) + [TIPO_IMPORTADO])
 
-    def _rec_defs_actuales(self) -> list:
-        if self.rv_tipo.get() == TIPO_IMPORTADO:
-            return [tuple(d) for d in self._rec_defs_imp]
-        return TIPOS_RECUADRO[self.rv_tipo.get()]
+    def _rec_tipo_valido(self) -> str:
+        """Tipo del formulario; si el texto escrito aún no es un tipo, el último válido."""
+        n = self.rv_tipo.get().strip()
+        if n in TIPOS_RECUADRO or (n == TIPO_IMPORTADO and self._rec_defs_imp):
+            self._rec_tipo_ok = n
+        return self._rec_tipo_ok
 
-    def _rec_valores_campos(self) -> dict:
-        out = {}
-        for etiqueta, (w, clase) in self._rec_widgets.items():
-            out[etiqueta] = (w.get() if clase == "linea"
-                             else w.get("1.0", "end-1c")).strip()
-        return out
+    def _rec_tipo_escrito(self):
+        """El usuario escribió un tipo: si no existe se crea con los campos actuales."""
+        n = " ".join(self.rv_tipo.get().split())
+        if not n:
+            self.rv_tipo.set(self._rec_tipo_valido())
+            return
+        if n == self._rec_tipo_valido():
+            return
+        existente = next((t for t in list(TIPOS_RECUADRO) + [TIPO_IMPORTADO]
+                          if t.lower() == n.lower()), None)
+        if existente:                               # existe (quizá con otras mayúsculas)
+            self.rv_tipo.set(existente)
+            self._rec_cambiar_tipo()
+            return
+        defs = [tuple(d) for d in self._rec_defs_actuales()] or list(TIPOS_RECUADRO[TIPO_DEFECTO])
+        nombre = tipos_personalizados.agregar(n, defs)
+        self.rv_tipo.set(nombre)
+        self._rec_tipo_ok = nombre
+        self._rec_tipos_refrescar()
+        self._rec_det_modo_libre()
+        self._rec_preview()
+        self.v_status.set(f"Tipo «{nombre}» agregado: puedes editar todo el cuadro de detalle")
 
     def _rec_cambiar_tipo(self):
         """Cambia los campos conservando lo ya escrito en los que coinciden."""
@@ -307,7 +298,7 @@ class RecuadrosMixin:
     # =========================================================================
     def _rec_leer_form(self) -> dict:
         rec = {
-            "tipo": self.rv_tipo.get(),
+            "tipo": self._rec_tipo_valido(),
             "unidad": self.rv_unidad.get().strip(),
             "grupo": self.rv_grupo.get().strip(),
             "detenidos": self.rv_det.get().strip(),
@@ -315,14 +306,15 @@ class RecuadrosMixin:
             "campos": self._rec_valores_campos(),
             "fotos": list(self._rec_fotos),
         }
-        if rec["tipo"] == TIPO_IMPORTADO:
-            rec["defs"] = [list(d) for d in self._rec_defs_imp]
+        if rec["tipo"] == TIPO_IMPORTADO or getattr(self, "_rec_det_libre", False):
+            rec["defs"] = [list(d) for d in self._rec_defs_actuales()]
         return rec
 
     def _rec_cargar_form(self, rec: dict):
         if rec.get("defs"):
             self._rec_defs_imp = [tuple(d) for d in rec["defs"]]
         self.rv_tipo.set(rec["tipo"])
+        self._rec_tipo_ok = rec["tipo"]
         self.rv_unidad.set(rec["unidad"])
         self.rv_grupo.set(rec["grupo"])
         self.rv_det.set(rec["detenidos"])
@@ -330,7 +322,7 @@ class RecuadrosMixin:
         self.rv_titulo.insert("1.0", rec["titulo"])
         self._rec_fotos = list(rec.get("fotos", []))
         self._rec_fotos_refrescar()
-        self._rec_construir_campos(rec["campos"])
+        self._rec_construir_campos(rec["campos"], defs=rec.get("defs"))
         self._rec_preview()
 
     def _rec_refrescar_lista(self, seleccionar=None):
@@ -397,11 +389,14 @@ class RecuadrosMixin:
         self._rec_preview()
 
     def _rec_guardar(self):
+        self._rec_tipo_escrito()          # un tipo escrito y sin confirmar también se guarda
         rec = self._rec_leer_form()
         if not rec["unidad"]:
             messagebox.showwarning("Falta la unidad",
                                    "Indica la unidad o brigada del recuadro.")
             return
+        if rec["tipo"] in tipos_personalizados.PERSONALIZADOS and rec.get("defs"):
+            tipos_personalizados.agregar(rec["tipo"], rec["defs"])
         if self._rec_idx is None:
             self.recuadros.append(rec)
             idx = len(self.recuadros) - 1

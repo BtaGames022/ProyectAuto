@@ -51,14 +51,39 @@ def _panel(widget):
     return None
 
 
+def _scroll_tcl(raiz, ruta: str, pasos: int):
+    """Desplaza un widget interno de Tcl (como la lista abierta de un Combobox)."""
+    if not raiz or not ruta:
+        return
+    objetivo = (str(ruta).split(".popdown")[0] + ".popdown.f.l"
+                if ".popdown" in str(ruta) else str(ruta))
+    try:
+        raiz.tk.call(objetivo, "yview", "scroll", pasos, "units")
+    except tk.TclError:
+        pass
+
+
 def _enrutar(event):
     pasos = _pasos(event)
     if not pasos:
         return "break"
+    if isinstance(event.widget, str):
+        _scroll_tcl(tk._default_root, event.widget, pasos)
+        return "break"
     try:
         w = event.widget.winfo_containing(event.x_root, event.y_root) or event.widget
     except (KeyError, tk.TclError):
+        try:
+            ruta = event.widget.tk.call("winfo", "containing", event.x_root, event.y_root)
+        except tk.TclError:
+            ruta = ""
+        if ruta and ".popdown" in str(ruta):
+            _scroll_tcl(event.widget, str(ruta), pasos)
+            return "break"
         w = event.widget
+    if isinstance(w, str):
+        _scroll_tcl(tk._default_root, w, pasos)
+        return "break"
     if w.winfo_class() in _NATIVOS and _puede(w, pasos):
         w.yview_scroll(pasos, "units")
         return "break"

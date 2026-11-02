@@ -86,6 +86,42 @@ def action_btn(parent, text, cmd, color=ACCENT, small=False):
 # ──────────────────────────────────────────────────────────────────────────────
 # TABLA EDITABLE
 # ──────────────────────────────────────────────────────────────────────────────
+import re as _re
+
+_SEP_MULTILINEA = _re.compile(
+    r"\s{2,}"
+    r"|(?<=[A-Za-záéíóúñÁÉÍÓÚÑ.])\s+(?=\d+\s+[A-Za-záéíóúñÁÉÍÓÚÑ])"
+    r"|(?<=[A-Za-z0-9áéíóúñÁÉÍÓÚÑ])\s*-\s+(?=[A-Za-záéíóúñÁÉÍÓÚÑ])"
+)
+_SOLO_NUM = _re.compile(r"^\d+$")
+_LETRA_INI = _re.compile(r"^[A-Za-záéíóúñÁÉÍÓÚÑ]")
+
+
+def _normalizar_multilinea(texto: str) -> str:
+    """Convierte listas separadas por varios espacios (o número en línea aparte)
+    en una línea por ítem para que se visualicen completas en la tabla."""
+    s = str(texto if texto is not None else "").strip()
+    if not s:
+        return ""
+    raw_lines = [ln.strip() for ln in s.splitlines() if ln.strip()]
+    unidas = []
+    i = 0
+    while i < len(raw_lines):
+        if (_SOLO_NUM.match(raw_lines[i]) and i + 1 < len(raw_lines)
+                and _LETRA_INI.match(raw_lines[i + 1])):
+            unidas.append(f"{raw_lines[i]} {raw_lines[i + 1]}")
+            i += 2
+        else:
+            unidas.append(raw_lines[i])
+            i += 1
+    out = []
+    for ln in unidas:
+        for parte in _SEP_MULTILINEA.split(ln):
+            if parte.strip():
+                out.append(" ".join(parte.split()))
+    return "\n".join(out)
+
+
 class AutoScrollbar(ttk.Scrollbar):
     """Barra que solo aparece cuando hay algo que desplazar."""
 
@@ -109,12 +145,15 @@ class EditableTree(ttk.Treeview):
     _estilo_listo = False
 
     def __init__(self, parent, columns, col_widths=None, height=8,
-                 editable_cols=None, on_change=None, min_rows=1, **kw):
+                 editable_cols=None, on_change=None, min_rows=1,
+                 multiline_cols=None, **kw):
         self._estilo()
+        self._style_name = f"T{id(self)}.PDI.Treeview"
         super().__init__(parent, columns=columns, show="headings",
-                         height=min_rows, style="PDI.Treeview", **kw)
+                         height=min_rows, style=self._style_name, **kw)
         self._columns = columns
         self._editable_cols = editable_cols or list(range(1, len(columns)))
+        self._multiline_cols = set(multiline_cols or ())
         self._on_change = on_change
         self._entry_popup = None
         self._hover_item = None
@@ -201,6 +240,14 @@ class EditableTree(ttk.Treeview):
         super().delete(*items)
         self._programar_ajuste()
 
+    def item(self, item, option=None, **kw):
+        if "values" in kw and "total" not in super().item(item, "tags"):
+            kw["values"] = self._formatear_fila(kw["values"])
+        r = super().item(item, option, **kw)
+        if "values" in kw:
+            self._programar_ajuste()
+        return r
+
     def _programar_ajuste(self):
         if self._ajuste is None:
             self._ajuste = self.after_idle(self._ajustar_altura)
@@ -208,8 +255,23 @@ class EditableTree(ttk.Treeview):
     def _ajustar_altura(self):
         self._ajuste = None
         try:
-            n = len(self.get_children())
+            hijos = self.get_children()
+            n = len(hijos)
             self.configure(height=max(self._min_rows, min(n, self._max_rows)))
+            for idx, r in enumerate(hijos):
+                tags = self.item(r, "tags")
+                if not any(t in tags for t in _ESPECIALES + ("selrow", "hover")):
+                    super().item(r, tags=("even" if idx % 2 else "odd",))
+            raiz = tk._default_root
+            px = raiz.winfo_fpixels("1i") / 72 if raiz else 1.333
+            base = int(round(SIZE_BASE * max(px, 1.0) * 2.25))
+            paso = int(round(SIZE_BASE * max(px, 1.0) * 1.35))
+            max_ln = 1
+            for r in hijos:
+                for v in self.raw_values(r):
+                    max_ln = max(max_ln, str(v).count("\n") + 1)
+            alto = base if max_ln <= 1 else max(base, max_ln * paso + 10)
+            ttk.Style().configure(self._style_name, rowheight=alto)
         except tk.TclError:
             pass
 
@@ -267,10 +329,20 @@ class EditableTree(ttk.Treeview):
         raw = self.tk.call(self._w, "item", item, "-values")
         return [str(v) for v in self.tk.splitlist(raw)]
 
+    def _formatear_fila(self, values):
+        if not self._multiline_cols:
+            return values
+        vals = list(values)
+        for i in self._multiline_cols:
+            if i < len(vals):
+                vals[i] = _normalizar_multilinea(vals[i])
+        return vals
+
     def add_row(self, values, tag=""):
         idx = len(self.get_children())
         t = tag if tag else ("even" if idx % 2 else "odd")
-        self.insert("", "end", values=values, tags=(t,))
+        vals = values if t in _ESPECIALES else self._formatear_fila(values)
+        self.insert("", "end", values=vals, tags=(t,))
 
     def add_total(self, values):
         self.insert("", "end", values=values, tags=("total",))
@@ -314,15 +386,30 @@ class EditableTree(ttk.Treeview):
         x, y, w, h = bbox
         valor_actual = self.raw_values(row_id)[col_idx]
 
+        es_multi = col_idx in self._multiline_cols or "\n" in str(valor_actual)
         marco = tk.Frame(self, bg=NAVY, padx=2, pady=2)
-        marco.place(x=x - 2, y=y - 2, width=max(w, 90) + 4, height=h + 4)
-        popup = tk.Entry(marco, font=(FONT_MONO, 11), justify="center",
-                         bg=GOLD_SOFT, fg=INK, relief="flat", bd=0,
-                         highlightthickness=0)
-        popup.pack(fill="both", expand=True)
-        popup.insert(0, str(valor_actual))
-        popup.select_range(0, "end")
-        popup.focus_set()
+        if es_multi:
+            n_ln = max(str(valor_actual).count("\n") + 2, 4)
+            alto_ed = max(h + 4, min(n_ln * 22 + 12, 220))
+            alto_tree = self.winfo_height()
+            y_ed = max(0, min(y - 2, alto_tree - alto_ed)) if alto_tree > alto_ed else max(0, y - 2)
+            marco.place(x=x - 2, y=y_ed, width=max(w, 180) + 4, height=alto_ed)
+            popup = tk.Text(marco, font=(FONT, SIZE_BASE), wrap="word",
+                            bg=GOLD_SOFT, fg=INK, relief="flat", bd=0,
+                            padx=6, pady=4, highlightthickness=0)
+            popup.pack(fill="both", expand=True)
+            popup.insert("1.0", str(valor_actual))
+            popup.tag_add("sel", "1.0", "end-1c")
+            popup.focus_set()
+        else:
+            marco.place(x=x - 2, y=y - 2, width=max(w, 90) + 4, height=h + 4)
+            popup = tk.Entry(marco, font=(FONT_MONO, 11), justify="center",
+                             bg=GOLD_SOFT, fg=INK, relief="flat", bd=0,
+                             highlightthickness=0)
+            popup.pack(fill="both", expand=True)
+            popup.insert(0, str(valor_actual))
+            popup.select_range(0, "end")
+            popup.focus_set()
         self._entry_popup = marco
         listo = [False]
 
@@ -350,7 +437,10 @@ class EditableTree(ttk.Treeview):
             if listo[0]:
                 return
             listo[0] = True
-            nuevo = popup.get().strip()
+            if es_multi:
+                nuevo = _normalizar_multilinea(popup.get("1.0", "end-1c"))
+            else:
+                nuevo = popup.get().strip()
             marco.destroy()
             self._entry_popup = None
             vals = self.raw_values(row_id)
@@ -370,7 +460,10 @@ class EditableTree(ttk.Treeview):
             marco.destroy()
             self._entry_popup = None
 
-        popup.bind("<Return>", lambda e: confirmar(mover=(1, 0)) or "break")
+        if es_multi:
+            popup.bind("<Control-Return>", lambda e: confirmar(mover=(1, 0)) or "break")
+        else:
+            popup.bind("<Return>", lambda e: confirmar(mover=(1, 0)) or "break")
         popup.bind("<Tab>", lambda e: confirmar(mover=(0, 1)) or "break")
         popup.bind("<Escape>", cancelar)
         popup.bind("<FocusOut>", lambda e: confirmar())
@@ -427,7 +520,7 @@ def etiqueta(parent, texto):
 
 def tree_with_scroll(parent, cols, widths=None, height=8,
                      editable=None, on_change=None, accent=None,
-                     min_rows=1) -> EditableTree:
+                     min_rows=1, multiline=None) -> EditableTree:
     """Tabla editable con borde y barras que aparecen solo si hacen falta."""
     borde = tk.Frame(parent, bg=LINE)
     borde.pack(fill="x", pady=(0, 4))
@@ -435,7 +528,8 @@ def tree_with_scroll(parent, cols, widths=None, height=8,
     wrap.pack(fill="both", expand=True, padx=1, pady=1)
 
     tree = EditableTree(wrap, cols, widths, height, editable_cols=editable,
-                        on_change=on_change, min_rows=min_rows)
+                        on_change=on_change, min_rows=min_rows,
+                        multiline_cols=multiline)
     vsb = AutoScrollbar(wrap, orient="vertical", command=tree.yview,
                         style="Thin.Vertical.TScrollbar")
     hsb = AutoScrollbar(wrap, orient="horizontal", command=tree.xview,

@@ -67,7 +67,7 @@ def detectar(doc):
             segs.setdefault("armas", _escanear(tbl, "armas", [0], 3))
         elif h == "DROGA" and n == 3:
             primera = _primer_texto(rows[1]) if len(rows) > 1 else ""
-            if "PLANTA" in primera or "(UNIDAD)" in primera:
+            if "drogas_g" in segs or "PLANTA" in primera or "(UNIDAD)" in primera:
                 # tabla propia de plantas / unidades (formato actual)
                 segs.setdefault("drogas_p", _escanear(tbl, "drogas_p", [0], 3))
             else:

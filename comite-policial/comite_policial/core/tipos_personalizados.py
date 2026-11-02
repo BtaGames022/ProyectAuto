@@ -79,6 +79,15 @@ def _nombre(rec: dict) -> str:
     return nombre
 
 
+def agregar(nombre: str, defs, ruta: str = None) -> str:
+    """Crea (o actualiza) un tipo escrito por el usuario y lo guarda. Devuelve el nombre."""
+    nombre = " ".join(nombre.split())
+    TIPOS_RECUADRO[nombre] = [(str(e), str(c)) for e, c in defs]
+    PERSONALIZADOS.add(nombre)
+    _guardar(ruta or RUTA)
+    return nombre
+
+
 def registrar(recuadros: list, ruta: str = None) -> list:
     """Agrega al catálogo los formatos de `recuadros` que aún no existen.
 

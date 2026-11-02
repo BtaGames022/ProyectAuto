@@ -210,35 +210,37 @@ class App(ViewsMixin, RecuadrosMixin, ExtraViewsMixin, DocumentoMixin,
         self._sb = sb
 
         marca = tk.Frame(sb, bg=NAVY_DEEP)
-        marca.pack(fill="x", padx=18, pady=(18, 12))
-        tk.Label(marca, image=self._logos[1], bg=NAVY_DEEP).pack(anchor="w")
-        tk.Label(marca, text="Comité Policial", bg=NAVY_DEEP, fg="#FFFFFF",
-                 font=(FONT, SIZE_H2, "bold")).pack(anchor="w", pady=(8, 0))
-        tk.Label(marca, text=settings.unidad, bg=NAVY_DEEP, fg=NAV_NUM,
-                 font=(FONT, SIZE_SMALL)).pack(anchor="w")
-        tk.Frame(sb, bg="#1D3470", height=1).pack(fill="x", padx=18)
+        marca.pack(fill="x", padx=16, pady=(10, 8))
+        tk.Label(marca, image=self._logos[1], bg=NAVY_DEEP).pack(side="left", padx=(0, 10))
+        txt_m = tk.Frame(marca, bg=NAVY_DEEP)
+        txt_m.pack(side="left", fill="x", expand=True)
+        tk.Label(txt_m, text="Comité Policial", bg=NAVY_DEEP, fg="#FFFFFF",
+                 font=(FONT, SIZE_BASE + 1, "bold"), anchor="w").pack(fill="x")
+        tk.Label(txt_m, text=settings.unidad, bg=NAVY_DEEP, fg=NAV_NUM,
+                 font=(FONT, 8), anchor="w").pack(fill="x")
+        tk.Frame(sb, bg="#1D3470", height=1).pack(fill="x", padx=16)
 
         # Panel de documento fijo abajo; el menú ocupa el resto y se desplaza
         self._build_doc_panel(sb)
         nav = ScrollFrame(sb, bg=NAVY_DEEP)
-        nav.pack(fill="both", expand=True, pady=(6, 0))
+        nav.pack(fill="both", expand=True, pady=(2, 0))
         interior = nav.interior
 
         self._nav = {}
         for grupo, items in MENU:
             tk.Label(interior, text=grupo, bg=NAVY_DEEP, fg=NAV_NUM,
-                     font=(FONT, 8, "bold"), anchor="w", padx=18
-                     ).pack(fill="x", pady=(12, 3))
+                     font=(FONT, 8, "bold"), anchor="w", padx=16
+                     ).pack(fill="x", pady=(6, 1))
             for num, nombre, clave in items:
                 self._nav[clave] = self._nav_item(interior, num, nombre, clave)
 
     def _nav_item(self, parent, num, nombre, clave):
         fila = tk.Frame(parent, bg=NAVY_DEEP, cursor="hand2")
-        fila.pack(fill="x", padx=8, pady=1)
+        fila.pack(fill="x", padx=8, pady=0)
         marca = tk.Frame(fila, bg=NAVY_DEEP, width=4)
         marca.pack(side="left", fill="y")
         n = tk.Label(fila, text=num, bg=NAVY_DEEP, fg=NAV_NUM, width=6, anchor="w",
-                     font=(FONT, SIZE_SMALL, "bold"), pady=5, padx=8)
+                     font=(FONT, SIZE_SMALL, "bold"), pady=3, padx=8)
         n.pack(side="left")
         t = tk.Label(fila, text=nombre, bg=NAVY_DEEP, fg=NAV_TXT, anchor="w",
                      font=(FONT, SIZE_BASE))

@@ -168,18 +168,71 @@ with tempfile.TemporaryDirectory() as tmp:
         assert len(a.recuadros) == 25
         # la edición del total de migraciones conserva la última celda
         a._switch("migr"); a.update()
+        from tkinter import ttk
+        rh_migr = int(ttk.Style().lookup(a.t_migr._style_name, "rowheight") or 0)
+        rh_armas = int(ttk.Style().lookup(a.t_armas._style_name, "rowheight") or 0)
+        assert rh_migr >= 150 and rh_armas < 50, (rh_migr, rh_armas)
         fila = a.t_migr.get_children()[0]
+        a.t_migr._abrir_editor(fila, 7)
+        a.update()
+        ed_nac = a.t_migr._entry_popup.winfo_children()[0]
+        assert ed_nac.winfo_class() == "Text", ed_nac.winfo_class()
+        assert ed_nac.get("1.0", "end-1c").count("\n") == 6
+        ed_nac.event_generate("<Escape>")
+        a.update()
         v = a.t_migr.raw_values(fila); v[6] = "4"; a.t_migr.item(fila, values=v)
         a._recalc_migr()
         assert a.t_migr.raw_values(a.t_migr.get_children()[-1])[7] == "76"
         a._switch("servicio"); a.update()
+        rh_serv = int(ttk.Style().lookup(a.t_servicio._style_name, "rowheight") or 0)
+        assert rh_serv >= 100, rh_serv
+        assert serv[0][0].splitlines() == [
+            "DEMIG VPO", "DEMIG VMA", "SEPISAN",
+            "DEMIGLAD", "SEPIQTO", "SEPIIPA"], serv[0][0]
+        assert serv[0][8].splitlines() == [
+            "49 venezolanos", "5 haitianos", "7 colombianos",
+            "4 argentinos", "1 ecuatoriano", "1 chileno"], serv[0][8]
         # tipos nuevos disponibles en el desplegable
         nuevos = set(TIPOS_RECUADRO) - antes
         assert nuevos and nuevos <= set(a._rec_cb.cget("values")), nuevos
         assert any("opciones nuevas de concurrencia" in c for c in cuadros), cuadros
-        # exportar a PowerPoint sigue funcionando con la columna EXTENAS
+        # agregar y eliminar filas en Plantas (unidades) + guardar en Word
+        a._switch("drogas"); a.update()
+        a._add_drogas_p()
+        ch_dp = a.t_drogas_p.get_children()
+        assert len(ch_dp) == 4, len(ch_dp)  # 2 originales + 1 nueva + TOTAL
+        a.t_drogas_p.item(ch_dp[2], values=["LSD (unidad)", "2", "100"])
+        a._recalc_drogas_p()
+        assert a.t_drogas_p.raw_values(ch_dp[-1]) == ["TOTAL", "5", "27.251"]
+        a._add_drogas_p()
+        ch_dp = a.t_drogas_p.get_children()
+        assert len(ch_dp) == 5
+        a.t_drogas_p.selection_set(ch_dp[3])
+        a._del_drogas_p()
+        assert len(a.t_drogas_p.get_children()) == 4
+        a._doc_guardar(auto=False)
+        r_dp = importar(copia)
+        assert [x[0] for x in r_dp["tablas"]["drogas_p"]["rows"]] == [
+            "Cannabis Sativa Plantas (unidad)", "Éxtasis (unidad)", "LSD (unidad)"
+        ], r_dp["tablas"]["drogas_p"]
+        assert r_dp["tablas"]["drogas_p"]["total"][1:] == ["5", "27.251"]
+        # exportar a PowerPoint con y sin la lámina de Servicio Especial
+        from pptx import Presentation
+        assert a.v_serv_pptx.get() is True
         ruta, avisos = a._gen_pptx(tmp)
         assert os.path.isfile(ruta)
+        prs_con = Presentation(ruta)
+        tb_dp = next(sh.table for sl in prs_con.slides for sh in sl.shapes if sh.name == "T:drogas_p")
+        assert [tb_dp.cell(i, 0).text.strip() for i in range(1, 4)] == [
+            "Cannabis Sativa Plantas (unidad)", "Éxtasis (unidad)", "LSD (unidad)"
+        ], [tb_dp.cell(i, 0).text.strip() for i in range(len(tb_dp.rows))]
+        assert [tb_dp.cell(4, 1).text.strip(), tb_dp.cell(4, 2).text.strip()] == ["5", "27.251"]
+        assert any(sh.name == "T:servicio_ext" for sl in prs_con.slides for sh in sl.shapes)
+        a.v_serv_pptx.set(False)
+        ruta_sin, _ = a._gen_pptx(tmp)
+        prs_sin = Presentation(ruta_sin)
+        assert len(prs_sin.slides) == len(prs_con.slides) - 1
+        assert not any(sh.name == "T:servicio_ext" for sl in prs_sin.slides for sh in sl.shapes)
     finally:
         a.destroy()
         for n in set(TIPOS_RECUADRO) - antes:

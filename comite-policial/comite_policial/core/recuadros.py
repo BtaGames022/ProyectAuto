@@ -7,7 +7,10 @@ Un recuadro es una tabla de 1 fila x 2 columnas:
 Este módulo produce una representación neutra que usan la vista previa, los
 exportadores y la sincronización con el documento original.
 """
+import re
 from comite_policial.config.catalogos import TIPOS_RECUADRO
+
+_SUFIJO_DUP = re.compile(r"\s+\(\d+\)$")
 
 TIPO_DEFECTO = next(iter(TIPOS_RECUADRO))
 TIPO_IMPORTADO = "Importado del documento (campos originales)"
@@ -22,8 +25,8 @@ def nuevo_recuadro(tipo: str = TIPO_DEFECTO, fecha: str = "") -> dict:
 
 
 def campos_def(rec: dict) -> list:
-    """Campos (etiqueta, clase) del recuadro: propios si fue importado."""
-    if rec.get("tipo") == TIPO_IMPORTADO and rec.get("defs"):
+    """Campos (etiqueta, clase) del recuadro: propios si los trae, o los del tipo."""
+    if rec.get("defs"):
         return [tuple(d) for d in rec["defs"]]
     return TIPOS_RECUADRO.get(rec.get("tipo"), [])
 
@@ -83,11 +86,12 @@ def parrafos_derecha(rec: dict) -> list:
         if out and not (clase == "linea" and prev_linea):
             out.append([])
         lineas = [ln.rstrip() for ln in valor.splitlines() if ln.strip()]
+        rot = _SUFIJO_DUP.sub("", etiqueta)
         if clase == "lista":
-            out.append([(f"{etiqueta}:", True)])
+            out.append([(f"{rot}:", True)])
             out.extend([(ln, False)] for ln in lineas)
         else:
-            out.append([(f"{etiqueta}: ", True), (lineas[0], False)])
+            out.append([(f"{rot}: ", True), (lineas[0], False)])
             out.extend([(ln, False)] for ln in lineas[1:])
         prev_linea = clase == "linea"
     return out
@@ -98,6 +102,7 @@ def resumen(rec: dict) -> tuple:
     c = rec.get("campos", {})
     tipo = rec.get("tipo", "")
     if tipo == TIPO_IMPORTADO:
-        tipo = "Importado"
+        titulo = " ".join(ln.strip() for ln in rec.get("titulo", "").splitlines() if ln.strip())
+        tipo = titulo or "Importado"
     return (rec.get("unidad", ""), tipo, c.get("Fecha", ""),
             c.get("Lugar", ""), texto_detenidos(rec.get("detenidos", "")))

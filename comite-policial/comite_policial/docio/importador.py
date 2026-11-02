@@ -12,7 +12,11 @@ from comite_policial.docio.xml import (W_P, W_TR, cell_text, par_runs, par_text,
                                        phys_cells, norm)
 
 ETIQUETA_RE = re.compile(r"^\s*([A-ZÁÉÍÓÚÑ][^:\n]{1,60}?)\s*:\s*(.*)$", re.DOTALL)
-DETENIDOS_RE = re.compile(r"^(\d+)\s+DETENIDOS?\s*$", re.IGNORECASE)
+DETENIDOS_RE = re.compile(r"^(\d+)\s+DETENID[OA]S?\s*$", re.IGNORECASE)
+ROTULOS_STD = {"FECHA", "LUGAR", "VICTIMA", "VICTIMAS", "IMPUTADO", "IMPUTADOS",
+               "DETENIDO", "DETENIDA", "DETENIDOS", "HECHOS", "DILIGENCIA",
+               "DILIGENCIAS", "RESULTADO", "RESULTADOS", "ESPECIES INCAUTADAS",
+               "DROGA INCAUTADA", "EVIDENCIAS", "FISCAL", "LESIONADOS", "FALLECIDOS"}
 
 
 def abrir(origen) -> Document:
@@ -61,7 +65,7 @@ def _parse_derecha(tc):
             continue
         runs = par_runs(p)
         m = ETIQUETA_RE.match(texto)
-        es_etiqueta = bool(m) and bool(runs) and runs[0][1]
+        es_etiqueta = bool(m) and ((bool(runs) and runs[0][1]) or norm(m.group(1)) in ROTULOS_STD)
         if es_etiqueta:
             etiqueta, resto = m.group(1).strip(), m.group(2).strip()
             base, k = etiqueta, 2
@@ -93,7 +97,7 @@ def importar(origen) -> dict:
     """Lee el documento y devuelve el estado completo de la aplicación."""
     doc = abrir(origen)
     estado = {"semana": "", "turno": "", "tablas": {}, "recuadros": [],
-              "texto_x": "", "servicio_fechas": ""}
+              "texto_x": "", "servicio_fechas": "", "nota_sintetica": ""}
 
     for p in doc.paragraphs:
         t = p.text.strip()
@@ -104,6 +108,8 @@ def importar(origen) -> dict:
         elif not estado["servicio_fechas"] and "SERVICIO ESPECIAL DE FISCALIZACION" in norm(t):
             m = SERV_FECHAS_RE.search(t)
             estado["servicio_fechas"] = m.group(2).strip() if m else ""
+        elif not estado["nota_sintetica"] and "DROGA SINTETICA" in norm(t):
+            estado["nota_sintetica"] = t
 
     segs, recs = detectar(doc)
     for key, seg in segs.items():

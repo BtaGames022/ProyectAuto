@@ -39,9 +39,11 @@ class PptxExporterMixin:
 
     def _estado_pptx(self) -> dict:
         serv = getattr(self, "v_serv_fechas", None)
+        serv_ppt = getattr(self, "v_serv_pptx", None)
         nota = getattr(self, "txt_nota_sint", None)
         estado = {"semana": self.v_semana.get().strip(),
-                  "servicio_fechas": serv.get().strip() if serv is not None else ""}
+                  "servicio_fechas": serv.get().strip() if serv is not None else "",
+                  "servicio_en_pptx": bool(serv_ppt.get()) if serv_ppt is not None else True}
         if nota is not None:
             estado["nota_sintetica"] = nota.get("1.0", "end-1c")
         return {**estado,

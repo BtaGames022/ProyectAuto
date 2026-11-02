@@ -10,9 +10,9 @@ COLS_FLUJO = ["FECHA", "ENTRADOS LIBERTADORES", "ENTRADOS USPALLATA",
               "TOTAL", "DETENIDOS"]
 
 
-COLS_SERVICIO = ["UNIDAD", "FISCALIZACIÓN", "FISCALIZADOS O CONSULTADOS", "DENUNCIADOS",
-                 "NOTIF. EXPULSIÓN", "DETENIDOS", "EXTENA", "TOTAL DENUNCIADOS",
-                 "NACIONALIDAD DENUNCIADOS"]
+COLS_SERVICIO = ["UNIDAD", "FISC.", "FISCALIZADOS", "DENUNCIADOS",
+                 "NOTIF. EXPULSIÓN", "DETENIDOS", "EXTENA", "TOTAL DEN.",
+                 "NACION. DENUNCIADOS"]
 UNIDADES_SERVICIO = "DEMIG VPO- DEMIG VMA- SEPISAN- DEMIGLAD- SEPIQTO- SEPIIPA"
 
 
@@ -25,7 +25,7 @@ class ExtraViewsMixin:
                       "Libertadores, Uspallata y Horcones")
         _, c = card(v, "Flujo diario")
         hint_label(c, "Doble clic para editar · ENTRADOS, SALIDOS y TOTAL se calculan solos")
-        widths = [110, 190, 170, 150, 150, 100, 100, 90, 100]
+        widths = [90, 190, 170, 155, 155, 92, 92, 85, 98]
         self.t_flujo = tree_with_scroll(c, COLS_FLUJO, widths, height=7,
                                         editable=[0, 1, 2, 3, 4, 8],
                                         on_change=self._recalc_flujo)
@@ -77,20 +77,29 @@ class ExtraViewsMixin:
         section_title(v, "IX", "Servicio especial de fiscalización de extranjeros",
                       "Departamento de Migraciones y Policía Internacional")
 
-        _, c0 = card(v, "Fechas del servicio")
+        _, c0 = card(v, "Fechas del servicio y exportación")
         hint_label(c0, "Se escriben en el título de la tabla, por ejemplo «19 Y 20.OCT.026»")
         self.v_serv_fechas = tk.StringVar()
         ent = tk.Entry(c0, textvariable=self.v_serv_fechas, font=(FONT, 10),
                        relief="solid", bd=1, width=30)
         ent.pack(anchor="w", ipady=3)
         self.v_serv_fechas.trace_add("write", lambda *a: self._doc_cambio())
+        self.v_serv_pptx = tk.BooleanVar(value=True)
+        tk.Checkbutton(
+            c0,
+            text="Incluir esta tabla (lámina de Servicio Especial) al exportar el PowerPoint",
+            variable=self.v_serv_pptx, bg=SURFACE, fg=INK, activebackground=SURFACE,
+            activeforeground=INK, selectcolor=SURFACE, font=(FONT, SIZE_BASE, "bold"),
+            cursor="hand2"
+        ).pack(anchor="w", pady=(10, 0))
 
         _, c = card(v, "Resultados del servicio")
-        hint_label(c, "Doble clic para editar · Tab / Enter para avanzar · "
-                      "Las dos últimas columnas admiten texto libre")
-        widths = [190, 100, 130, 100, 120, 90, 80, 120, 300]
+        hint_label(c, "Doble clic para editar · UNIDAD, EXTENA y NACIONALIDAD DENUNCIADOS admiten varias líneas "
+                      "(Enter agrega línea, Tab o clic fuera guarda)")
+        widths = [140, 70, 120, 115, 145, 95, 95, 110, 195]
         self.t_servicio = tree_with_scroll(c, COLS_SERVICIO, widths, height=4,
-                                           editable=list(range(len(COLS_SERVICIO))))
+                                           editable=list(range(len(COLS_SERVICIO))),
+                                           multiline=[0, 6, 8])
         self.t_servicio.add_row([UNIDADES_SERVICIO] + ["0"] * 7 + [""])
 
         bar = tk.Frame(c, bg=CARD_BG); bar.pack(anchor="w", pady=(8, 0))
