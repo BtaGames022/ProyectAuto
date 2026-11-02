@@ -199,6 +199,22 @@ a.update()
 claves = [m.clave for m in dlg.marcos]
 assert len(claves) == len(set(claves)) >= 20 and "armas_1" in claves and "det_2" in claves, claves
 assert dlg.v_resumen.get().startswith("0 de "), dlg.v_resumen.get()
+
+
+def mapeados(wd):
+    return (1 if wd.winfo_ismapped() else 0) + sum(mapeados(c) for c in wd.winfo_children())
+
+
+# Una lámina a la vez, como las vistas de la app: apilar las 8 láminas (casi 300 widgets) en un
+# panel con barra dejaba restos duplicados en pantalla al arrastrar la barra en algunos Windows.
+assert [n for n, t in dlg._tarjetas.items() if t.winfo_ismapped()] == [dlg._actual]
+for lam in list(dlg._por_lamina) + [list(dlg._por_lamina)[0]]:
+    dlg.mostrar(lam)
+    a.update()
+    assert dlg._actual == lam
+    assert [n for n, t in dlg._tarjetas.items() if t.winfo_ismapped()] == [lam], lam
+    assert mapeados(dlg) < 120, mapeados(dlg)
+assert not [w for w in dlg.winfo_children() if w.winfo_class() == "Canvas"], "no debe haber panel desplazable"
 dlg.asignar("armas_1", foto)                           # la miniatura se dibuja recortada
 a.update()
 assert a.fotos_pptx == {"armas_1": foto} and dlg.v_resumen.get().startswith("1 de ")
