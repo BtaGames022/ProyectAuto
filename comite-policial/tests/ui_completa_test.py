@@ -194,12 +194,31 @@ a.txt_x.insert("1.0", "Resumen de relevancia.")
 a._doc_cambio()
 
 # ── 8. Fotos de las láminas y exportación de punta a punta ───────────────────
-a._fotos_dialogo()
+dlg = a._fotos_dialogo()
 a.update()
-top = [x for x in a.winfo_children() if x.winfo_class() == "Toplevel"][0]
-top.destroy()
+claves = [m.clave for m in dlg.marcos]
+assert len(claves) == len(set(claves)) >= 20 and "armas_1" in claves and "det_2" in claves, claves
+assert dlg.v_resumen.get().startswith("0 de "), dlg.v_resumen.get()
+dlg.asignar("armas_1", foto)                           # la miniatura se dibuja recortada
+a.update()
+assert a.fotos_pptx == {"armas_1": foto} and dlg.v_resumen.get().startswith("1 de ")
+assert "armas_1" in dlg._imgs
+dlg.quitar("armas_1")
+assert not a.fotos_pptx
+filedialog.askopenfilenames = lambda **k: (foto, foto, foto)    # «Elegir varias…» reparte en orden
+dlg.elegir_varias(dlg._por_lamina[3])                  # lámina de droga: 4 marcos
+assert [k for k in a.fotos_pptx] == ["droga_1", "droga_2", "droga_3"], a.fotos_pptx
+dlg.quitar_todas()
+assert not a.fotos_pptx and dlg.v_resumen.get().startswith("0 de ")
+dlg.destroy()
+assert not [x for x in a.winfo_children() if x.winfo_class() == "Toplevel"]
 a.fotos_pptx["armas_1"] = foto
 a.fotos_pptx["det_2"] = os.path.join(tmp, "no_existe.jpg")   # foto perdida: aviso, no falla
+from comite_policial.config.catalogos import NOTA_SINTETICA
+a._switch("drogas")
+assert a.txt_nota_sint.get("1.0", "end-1c") == NOTA_SINTETICA     # editable, con valor inicial
+a.txt_nota_sint.delete("1.0", "end")
+a.txt_nota_sint.insert("1.0", "(*) Droga Sintética: Tusi")
 salida = os.path.join(tmp, "informe.pptx")
 filedialog.asksaveasfilename = lambda **k: salida
 cuadros.clear()
@@ -207,16 +226,19 @@ a._exportar_pptx()
 a.update()
 assert os.path.isfile(salida), "no se generó el PowerPoint"
 prs = Presentation(salida)
-assert len(prs.slides) == 8 + 2 + 1, len(prs.slides)
+assert len(prs.slides) == 9 + 2 + 1, len(prs.slides)
 fotos_laminas = {i for i, s in enumerate(prs.slides, 1)
                  for sh in s.shapes if sh.shape_type == 13}
 assert 2 in fotos_laminas, fotos_laminas              # la foto de armas quedó en la lámina 2
+assert not [sh for s in prs.slides for sh in s.shapes if sh.name.startswith("FOTO:")]
+nota_ppt = [sh.text_frame.text for sh in prs.slides[2].shapes if sh.name == "NOTA:sintetica"]
+assert nota_ppt == ["(*) Droga Sintética: Tusi"], nota_ppt      # lo escrito en la app llega a la lámina
 assert not [x for x in cuadros if x[0] == "error"], cuadros
 
 # casilla PPT desmarcada: ese recuadro no sale
 a.recuadros[0]["en_pptx"] = False
 a._exportar_pptx()
-assert len(Presentation(salida).slides) == 8 + 1 + 1
+assert len(Presentation(salida).slides) == 9 + 1 + 1
 assert not os.path.exists(salida + ".tmp")
 assert not [f for f in os.listdir(tmp) if f.endswith(".pptx") and f != "informe.pptx"]
 

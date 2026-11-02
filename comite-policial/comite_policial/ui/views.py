@@ -73,6 +73,14 @@ class ViewsMixin:
                                            on_change=self._recalc_drogas_p)
         self._fill_drogas_p()
 
+        _, c3 = card(v, "Nota de droga sintética (*)")
+        hint_label(c3, "Sale bajo la tabla de gramos en la lámina de droga del PowerPoint · "
+                       "un párrafo por línea · vacía = la nota no se muestra")
+        self.txt_nota_sint = tk.Text(c3, height=3, wrap="word", padx=10, pady=8,
+                                     font=(FONT, SIZE_BASE))
+        self.txt_nota_sint.insert("1.0", NOTA_SINTETICA)
+        self.txt_nota_sint.pack(fill="x")
+
     def _fill_drogas_g(self):
         self.t_drogas_g.clear()
         for tipo in TIPOS_DROGAS_G:

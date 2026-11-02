@@ -1,15 +1,19 @@
 """Catálogos estructurales de las tablas del informe semanal."""
 from comite_policial.config.settings import settings
+from comite_policial.core.fechas import semana_str
+from comite_policial.docio.semana import periodo_cerrado
 
 ANO_ANT = settings.ano_ant
 ANO_ACT = settings.ano_act
-PERIODO = settings.periodo
+PERIODO = (periodo_cerrado(semana_str()) if settings.periodo.strip().lower() in ("", "auto")
+           else settings.periodo)
 
-TIPOS_ARMAS    = ["Armas de Fuego", "Aire Comprimido", "Armas Hechizas",
-                  "Armas Fogueo", "Armas de Fantasía"]
+TIPOS_ARMAS    = ["Armas de Fuego", "Armas Fogueo", "Aire Comprimido",
+                  "Armas Hechizas", "Armas de Fantasía", "Réplicas de Armas"]
 TIPOS_DROGAS_G = ["Cannabis Sativa (g.)", "Clorhidrato Cocaína (g.)",
                   "Cocaína Base (g.)", "Sintéticas (g.) (*)"]
-TIPOS_DROGAS_P = ["Cannabis Sativa Plantas (unidad)", "Éxtasis (unidad)"]
+NOTA_SINTETICA = "(*) Droga Sintética: Ketamina – Éxtasis"   # nota bajo la tabla de gramos
+TIPOS_DROGAS_P =["Cannabis Sativa Plantas (unidad)", "Éxtasis (unidad)"]
 BH_PREF        = ["BH Valparaíso", "BH Los Andes", "BH San Antonio"]
 MODALIDADES    = ["Arma de Fuego", "Arma Cortante",
                   "Elemento Contundente", "Otras Modalidades"]
@@ -22,7 +26,7 @@ VEH_TIPOS      = ["Camión", "Motocicleta", "Tractocamión",
                   "Veh. Furgón", "Maquinaria", "Automóvil (Suv)"]
 BRISEX_UNITS   = ["Brisex VPO", "Brisex SAN", "Brisex LAD"]
 BANDAS_PREFS   = ["PROVPO", "PREVMA", "PROSAN", "PROLAD"]
-DET_PREFS      = ["PREVMA", "PROLAD", "PROVPO", "PROSAN", "PRECOCEN", "JENACIBЕР"]
+DET_PREFS      = ["PREVMA", "PROLAD", "PROVPO", "PROSAN", "PRECOCEN", "JENACIBER"]
 
 
 # ──────────────────────────────────────────────────────────────────────────────

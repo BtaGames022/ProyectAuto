@@ -48,10 +48,11 @@ comite-policial/
 │   ├── exporters/
 │   │   ├── pptx_export.py    #   botones Exportar PowerPoint y Fotos
 │   │   ├── pptx_informe.py   #   motor que rellena la plantilla .pptx
+│   │   ├── pptx_fotos.py     #   marcos de foto de la plantilla: lectura y colocación
 │   │   ├── recuadros_export.py  # dibujo de recuadros X (lo usa docio/escritor)
 │   │   └── word.py           #   exportador Word desde cero (legado, sin uso en la UI)
 │   └── ui/                   # app, views, views_extra, recuadros, documento,
-│                             # widgets, calendarios
+│                             # fotos (diálogo de fotos), widgets, calendarios
 ├── plantillas/plantilla_comite.pptx
 ├── tools/construir_plantilla_pptx.py
 ├── tests/
@@ -79,17 +80,44 @@ la tipografía de los documentos del comité.
 El botón **Exportar PowerPoint** abre `plantillas/plantilla_comite.pptx` (el
 informe real sin las fotos de la semana) y solo reescribe textos y celdas, de
 modo que fondos, fuentes y posiciones son los del original. Cubre: portada,
-I Armas, II Droga, III Homicidios (A-D), IV Migraciones, IV-B Flujo,
-V Vehículos, VII Bandas, VIII Detenidos (B y C), una lámina por cada recuadro de
-la Sección X y el cierre PDI. Las secciones que no figuran en el formato del
-comité (VI, VIII-A, IX y XI) no se exportan al PowerPoint.
+I Armas, II Droga, III Homicidios (A-D), IV Migraciones (con EXTENAS),
+IX Servicio especial de fiscalización de extranjeros, IV-B Flujo, V Vehículos,
+VII Bandas, VIII Detenidos (B y C), una lámina por cada recuadro de la Sección X y
+el cierre PDI. Las secciones que no figuran en el formato del comité (VI, VIII-A
+y XI) no se exportan al PowerPoint.
 
-- **Fotos:** el botón **Fotos** asigna una imagen a cada marco de las láminas
-  fijas (se recorta para llenarlo). Las fotos de cada diligencia se agregan en el
-  recuadro (sección X). Las fotos solo viven durante la sesión: no se guardan.
+- **Textos con fecha:** títulos, encabezados de tabla y rótulos («Semana del 19 AL
+  25.OCT.026», «HOMICIDIOS DEL 01.ENE al …», «COMPARATIVO ENE-SEP 2025/2026»,
+  «LUNES 19 Y MARTES 20.OCT.026» del servicio especial) se componen solos a partir
+  de la semana y de las fechas del servicio. Si la semana no cambia de mes se usa la
+  forma corta del informe (`19 AL 25.OCT.026`). El periodo del comparativo es
+  `ENE` hasta el último mes completo (`PERIODO=auto`).
+- **Nota de droga sintética:** la nota «(*) Droga Sintética: …» de la lámina de droga se
+  edita en la vista **II. Drogas** (un párrafo por línea). Vacía, la nota no se muestra.
+  Vive solo en la sesión y no se sincroniza con el Word.
+- **Fotos:** el botón **Fotos** muestra cada lámina con sus marcos numerados; un
+  clic en el marco (o en «Elegir…») asigna la foto, que se previsualiza recortada
+  como saldrá. «Elegir varias…» reparte un lote en orden. Los marcos los define la
+  propia plantilla (no hay coordenadas en el código) y los que quedan sin foto no
+  dejan nada en el archivo. Las fotos de cada diligencia se agregan en el recuadro
+  (sección X). Las fotos solo viven durante la sesión: no se guardan.
+- **Tablas largas:** las filas crecen con el texto (nacionalidades, delitos) y, si la
+  tabla no cabe sobre las fotos o en la lámina, se compactan y se baja la letra solo
+  de las celdas de varias líneas. Si ni así cabe, el aviso final lo indica.
 - **Cambiar el diseño:** si el comité cambia el formato, regenerar la plantilla con
-  `python tools/construir_plantilla_pptx.py "<informe nuevo>.pptx"`. El exportador
-  busca las tablas por nombre de objeto, conviene mantenerlos.
+
+  ```
+  python tools/construir_plantilla_pptx.py "<informe nuevo>.pptx"
+  ```
+
+  El script reconoce cada tabla por su cabecera (igual que `docio/mapa.py` con el
+  Word) y la renombra `T:<clave>`; reemplaza las tablas pegadas como imagen (III-D,
+  IV, IX) por tablas reales; deja un marco invisible `FOTO:<clave>` donde iba cada
+  foto (misma posición y capa); y conserva una lámina prototipo de diligencia
+  (`DILIG_CABECERA` / `DILIG_CUERPO`, se puede elegir con `--prototipo N`) y el
+  cierre. Imprime un resumen de lo que hizo. Si el nuevo informe cambia de lámina o
+  de nombre alguna imagen-tabla, el script se detiene y dice qué ajustar
+  (`TABLAS_IMAGEN`). El exportador ya no depende de nombres como «Tabla 6».
 
 ## Compilar el .exe
 
@@ -127,9 +155,16 @@ OK     roundtrip_docx.py
 OK     integracion_docx.py
 OK     smoke_recuadros.py
 OK     pptx_export_test.py
+OK     homi_d_test.py
+OK     nuevo_formato_test.py
 OK     scroll_test.py
 OK     ui_completa_test.py
 ```
+
+`ui_completa_test.py` simula teclas con `event_generate`, y Tk las descarta si la ventana de
+la prueba no tiene el foco del sistema. Lánzala desde una consola en primer plano y no hagas
+clic en otras ventanas mientras corre; si falla en la edición de una celda («assert … == "7"»)
+casi siempre es por eso y no por un error de la aplicación.
 
 Si alguna dice `FALLA`, debajo aparece el detalle (la línea que no se cumplió). Un
 código de salida distinto de 0 indica fallo, así que sirve también en un flujo automático.
@@ -149,9 +184,11 @@ Cada una imprime `OK` al final si todo salió bien.
 | `roundtrip_docx` | Importar un Word, modificarlo y reescribirlo sin perder el formato; sin cambios el XML queda idéntico. |
 | `integracion_docx` | Flujo completo App y Word: importar, editar una celda o un recuadro y comprobar que el guardado automático llega al archivo. |
 | `smoke_recuadros` | Sección X (crear, duplicar, casilla PPT) y exportación a Word y PowerPoint. |
-| `pptx_export_test` | El exportador de PowerPoint sin interfaz: sin restos de la semana de la plantilla, cantidad de láminas, textos y cierre. |
+| `pptx_export_test` | El exportador de PowerPoint sin interfaz: sin restos de la semana de la plantilla (tampoco en tablas sin datos), textos con fecha, las tablas IV y IX y el comparativo III-D, marcos de foto (en su posición, sin marcos vacíos, fotos perdidas), tablas largas que deben caber en la lámina y rechazo de plantillas antiguas. |
+| `homi_d_test` | III-D (comparativo interanual): importación desde la tabla del Word y escritura de vuelta. |
+| `nuevo_formato_test` | Formato nuevo del informe en el Word: EXTENAS en migraciones, Éxtasis, servicio especial de extranjeros, recuadros con varias filas por tabla y tipos nuevos de concurrencia. |
 | `scroll_test` | Regresión del error «se repite la vista»: la rueda del mouse no cambia desplegables ni reconstruye el formulario, y la vista previa no crece sin límite. |
-| `ui_completa_test` | Abre todas las vistas; edita celdas con el teclado; agrega y elimina filas; calendarios; recuadros; fotos; exporta el PowerPoint (con una foto perdida y el archivo bloqueado); importa un Word válido, uno dañado y uno ajeno; comprueba que al cerrar se guarda lo pendiente. |
+| `ui_completa_test` | Abre todas las vistas; edita celdas con el teclado; agrega y elimina filas; calendarios; recuadros; fotos (diálogo de marcos, «Elegir varias…»); exporta el PowerPoint (con una foto perdida y el archivo bloqueado); importa un Word válido, uno dañado y uno ajeno; comprueba que al cerrar se guarda lo pendiente. |
 
 ### Informe de ejemplo
 
@@ -179,7 +216,8 @@ lugar de pasar en silencio.
 | Variable | Descripción |
 |---|---|
 | `APP_TITLE` | Título de la ventana |
-| `ANO_ANTERIOR` / `ANO_ACTUAL` / `PERIODO` | Comparación interanual |
+| `ANO_ANTERIOR` / `ANO_ACTUAL` | Años de la comparación interanual |
+| `PERIODO` | Rótulo del comparativo (`ENE - SEP`). `auto` (por defecto) lo deduce de la semana: enero hasta el último mes completo |
 | `SEMANA_AUTO` | `true` detecta la semana actual (lunes-domingo) |
 | `SEMANA_DEFAULT` / `TURNO_RESPONSABLE` | Valores iniciales de la barra superior |
 | `WINDOW_WIDTH` / `WINDOW_HEIGHT` | Tamaño de ventana |

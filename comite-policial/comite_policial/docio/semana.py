@@ -31,6 +31,29 @@ def _partes(semana_app: str):
     return int(d1), m1.upper(), int(d2), m2.upper(), y
 
 
+def semana_corta(semana_app: str) -> str:
+    """Forma del informe cuando la semana no cambia de mes: '19.OCT AL 25.OCT.026' -> '19 AL 25.OCT.026'.
+    Si cambia de mes (o el texto no tiene el formato de la app) se devuelve igual."""
+    p = _partes(semana_app)
+    if not p or p[1] != p[3]:
+        return semana_app.strip()
+    d1, _, d2, m2, y = p
+    return f"{d1:02d} AL {d2:02d}.{m2}.{y}"
+
+
+def periodo_cerrado(semana_app: str) -> str:
+    """Periodo del comparativo interanual: de enero al último mes completo.
+
+    La semana del 19 al 25.OCT compara «ENE - SEP»; si la semana termina en enero
+    solo hay «ENE». Sin semana válida devuelve ''."""
+    from comite_policial.core.fechas import MESES_ABREV
+    p = _partes(semana_app)
+    if not p or p[3] not in MESES_ABREV:
+        return ""
+    ultimo = MESES_ABREV.index(p[3])            # 0 = ENE: el mes anterior es el último completo
+    return "ENE" if ultimo <= 1 else f"ENE - {MESES_ABREV[ultimo - 1]}"
+
+
 def funcion_semana(semana_app: str):
     """Devuelve la función de reemplazo para SEMANA_RE (None si el formato es inválido)."""
     p = _partes(semana_app)
